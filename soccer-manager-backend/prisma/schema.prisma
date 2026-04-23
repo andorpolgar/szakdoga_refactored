@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  gameSaves GameSave[]
+}
+
+model GameSave {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId         String
+  selectedTeamId String?
+  currentRound   Int     @default(1)
+
+  user         User          @relation(fields: [userId], references: [id])
+  saveTeams    SaveTeam[]
+  savePlayers  SavePlayer[]
+  saveLeagues  SaveLeague[]
+  saveFixtures SaveFixture[]
+  matchResults MatchResult[]
+
+  standings SaveStanding[]
+
+  transferHistory TransferHistory[]
+
+  @@index([userId])
+}
+
+model BaseTeam {
+  id        String   @id @default(cuid())
+  name      String
+  shortName String   @unique
+  createdAt DateTime @default(now())
+
+  leagueId String?
+  league   BaseLeague? @relation(fields: [leagueId], references: [id])
+
+  players BasePlayer[]
+
+  @@index([leagueId])
+}
+
+model SaveTeam {
+  id        String   @id @default(cuid())
+  name      String
+  shortName String
+  formation String   @default("4-3-3")
+  createdAt DateTime @default(now())
+
+  gameSaveId String
+  gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
+
+  saveLeagueId String?
+  saveLeague   SaveLeague? @relation(fields: [saveLeagueId], references: [id])
+
+  players SavePlayer[]
+
+  homeFixtures SaveFixture[] @relation("HomeTeamFixtures")
+  awayFixtures SaveFixture[] @relation("AwayTeamFixtures")
+
+  standing SaveStanding?
+
+  outgoingTransfers TransferHistory[] @relation("TransferFromTeam")
+  incomingTransfers TransferHistory[] @relation("TransferToTeam")
+
+  @@index([gameSaveId])
+  @@index([saveLeagueId])
+}
+
+model BasePlayer {
+  id       String @id @default(cuid())
+  name     String
+  age      Int
+  position String
+
+  overall   Int
+  pace      Int
+  shooting  Int
+  passing   Int
+  dribbling Int
+  defending Int
+  physical  Int
+
+  role           String
+  lineupPosition String?
+  marketValue    Int     @default(0)
+
+  teamId String
+  team   BaseTeam @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+}
+
+model SavePlayer {
+  id       String @id @default(cuid())
+  name     String
+  age      Int
+  position String
+
+  overall   Int
+  pace      Int
+  shooting  Int
+  passing   Int
+  dribbling Int
+  defending Int
+  physical  Int
+
+  role             String
+  lineupPosition   String?
+  lineupSlot       String?
+  isTransferListed Boolean @default(false)
+  marketValue      Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  gameSaveId String
+  gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
+
+  saveTeamId String
+  saveTeam   SaveTeam @relation(fields: [saveTeamId], references: [id])
+
+  transferHistory TransferHistory[]
+
+  @@index([gameSaveId])
+  @@index([saveTeamId])
+  @@index([lineupSlot])
+}
+
+model BaseLeague {
+  id        String   @id @default(cuid())
+  name      String
+  country   String
+  season    String
+  createdAt DateTime @default(now())
+
+  teams            BaseTeam[]
+  fixtureTemplates BaseFixtureTemplate[]
+}
+
+model SaveLeague {
+  id        String   @id @default(cuid())
+  name      String
+  country   String
+  season    String
+  createdAt DateTime @default(now())
+
+  gameSaveId String
+  gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
+
+  teams    SaveTeam[]
+  fixtures SaveFixture[]
+
+  @@index([gameSaveId])
+}
+
+model BaseFixtureTemplate {
+  id          String   @id @default(cuid())
+  roundNumber Int
+  homeTeamId  String
+  awayTeamId  String
+  createdAt   DateTime @default(now())
+
+  leagueId String
+  league   BaseLeague @relation(fields: [leagueId], references: [id])
+
+  @@index([leagueId])
+}
+
+model SaveFixture {
+  id          String   @id @default(cuid())
+  roundNumber Int
+  createdAt   DateTime @default(now())
+
+  gameSaveId String
+  gameSave   GameSave? @relation(fields: [gameSaveId], references: [id])
+
+  saveLeagueId String?
+  saveLeague   SaveLeague? @relation(fields: [saveLeagueId], references: [id])
+
+  homeTeamId String
+  awayTeamId String
+
+  homeTeam SaveTeam @relation("HomeTeamFixtures", fields: [homeTeamId], references: [id])
+  awayTeam SaveTeam @relation("AwayTeamFixtures", fields: [awayTeamId], references: [id])
+
+  matchResult MatchResult?
+
+  @@index([gameSaveId])
+  @@index([saveLeagueId])
+}
+
+model MatchResult {
+  id        String   @id @default(cuid())
+  homeGoals Int
+  awayGoals Int
+  playedAt  DateTime @default(now())
+
+  gameSaveId String
+  gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
+
+  saveFixtureId String      @unique
+  saveFixture   SaveFixture @relation(fields: [saveFixtureId], references: [id])
+
+  @@index([gameSaveId])
+}
+
+model SaveStanding {
+  id           String @id @default(cuid())
+  played       Int    @default(0)
+  wins         Int    @default(0)
+  draws        Int    @default(0)
+  losses       Int    @default(0)
+  goalsFor     Int    @default(0)
+  goalsAgainst Int    @default(0)
+  points       Int    @default(0)
+
+  gameSaveId String
+  gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
+
+  saveTeamId String   @unique
+  saveTeam   SaveTeam @relation(fields: [saveTeamId], references: [id])
+
+  @@index([gameSaveId])
+}
+
+model TransferHistory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  gameSaveId String
+  gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
+
+  playerId String
+  player   SavePlayer @relation(fields: [playerId], references: [id])
+
+  fromSaveTeamId String?
+  fromSaveTeam   SaveTeam? @relation("TransferFromTeam", fields: [fromSaveTeamId], references: [id])
+
+  toSaveTeamId String?
+  toSaveTeam   SaveTeam? @relation("TransferToTeam", fields: [toSaveTeamId], references: [id])
+
+  type        String
+  marketValue Int
+
+  @@index([gameSaveId])
+  @@index([playerId])
+  @@index([fromSaveTeamId])
+  @@index([toSaveTeamId])
+}

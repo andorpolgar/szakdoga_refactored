@@ -1,0 +1,175 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #2563eb;
+  color: white;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: white;
+}
+
+.page-shell {
+  min-height: 100vh;
+  padding: 32px 16px;
+}
+
+.page-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card {
+  max-width: 420px;
+  margin: 60px auto;
+}
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.muted-text {
+  color: #6b7280;
+}
+
+.error-text {
+  color: #dc2626;
+  margin-top: 12px;
+}
+
+.success-text {
+  color: #16a34a;
+  margin-top: 12px;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.save-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.save-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.save-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 120px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.fixture-row,
+.table-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+}
+
+.secondary-btn {
+  background: #374151;
+}
+
+.danger-btn {
+  background: #dc2626;
+}
+
+.row-gap {
+  display: flex;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .two-col,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .save-card {
+    flex-direction: column;
+  }
+
+  .save-actions {
+    min-width: unset;
+    flex-direction: row;
+  }
+
+  .top-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -2304,6 +2304,17 @@ export class UsersService {
         name: true,
         age: true,
         position: true,
+        overall: true,
+        pace: true,
+        shooting: true,
+        passing: true,
+        dribbling: true,
+        defending: true,
+        physical: true,
+        role: true,
+        lineupPosition: true,
+        lineupSlot: true,
+        marketValue: true,
       },
     });
 

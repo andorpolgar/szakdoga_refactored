@@ -10,6 +10,50 @@ const roleOrder = {
   reserve: 3,
 };
 
+const getPlayerOverall = (player) =>
+  player.overall ??
+  player.effectiveOverall ??
+  player.rating ??
+  player.ovr ??
+  player.stats?.overall ??
+  "-";
+
+const getPlayersFromResponse = (detailData, playersData) => {
+  const playersFromPlayersEndpoint = Array.isArray(playersData)
+    ? playersData
+    : playersData?.players ||
+      playersData?.team?.players ||
+      playersData?.squad?.players ||
+      playersData?.data ||
+      [];
+
+  if (playersFromPlayersEndpoint.length) {
+    return playersFromPlayersEndpoint;
+  }
+
+  return (
+    detailData?.players ||
+    detailData?.team?.players ||
+    detailData?.squad?.players ||
+    []
+  );
+};
+
+const getFixturesFromResponse = (detailData, fixturesData) => {
+  const fixturesFromEndpoint = Array.isArray(fixturesData)
+    ? fixturesData
+    : fixturesData?.fixtures || fixturesData?.data || [];
+
+  if (fixturesFromEndpoint.length) {
+    return fixturesFromEndpoint;
+  }
+
+  return [
+    ...(detailData?.lastFixtures || []),
+    ...(detailData?.upcomingFixtures || []),
+  ];
+};
+
 export default function TeamInfoModal({ saveId, teamId, onClose }) {
   const [teamDetail, setTeamDetail] = useState(null);
   const [players, setPlayers] = useState([]);
@@ -30,11 +74,14 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
     ])
       .then(([detailData, playersData, fixturesData]) => {
         setTeamDetail(detailData);
-        setPlayers(Array.isArray(playersData) ? playersData : playersData.players || []);
-        setFixtures(Array.isArray(fixturesData) ? fixturesData : fixturesData.fixtures || []);
+        setPlayers(getPlayersFromResponse(detailData, playersData));
+        setFixtures(getFixturesFromResponse(detailData, fixturesData));
       })
       .catch((err) => {
-        setError(err?.response?.data?.message || "Nem sikerült betölteni a csapat adatokat.");
+        setError(
+          err?.response?.data?.message ||
+            "Nem sikerült betölteni a csapat adatokat."
+        );
       })
       .finally(() => {
         setIsLoading(false);
@@ -42,22 +89,52 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
   }, [saveId, teamId]);
 
   const starters = [...players]
-    .filter(
-        (player) =>
-        player.role === "starter" ||
-        player.lineupSlot ||
-        player.lineupPosition
-    )
+    .filter((player) => {
+      const role = String(player.role || "").toLowerCase();
+
+      return (
+        role === "starter" ||
+        role === "starting" ||
+        role === "starting_xi" ||
+        Boolean(player.lineupSlot) ||
+        Boolean(player.lineupPosition)
+      );
+    })
     .sort((a, b) =>
-        (a.lineupSlot || a.lineupPosition || "").localeCompare(
-        b.lineupSlot || b.lineupPosition || ""
-        )
+      (a.lineupSlot || a.lineupPosition || a.position || "").localeCompare(
+        b.lineupSlot || b.lineupPosition || b.position || ""
+      )
     );
+
+  const fallbackStarters =
+    starters.length > 0
+      ? starters
+      : [...players]
+          .sort((a, b) => {
+            const overallDiff =
+              Number(getPlayerOverall(b)) - Number(getPlayerOverall(a));
+
+            if (!Number.isNaN(overallDiff) && overallDiff !== 0) {
+              return overallDiff;
+            }
+
+            return a.name.localeCompare(b.name);
+          })
+          .slice(0, 11);
 
   const squadPlayers = [...players].sort((a, b) => {
     const roleDiff = (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
+
     if (roleDiff !== 0) return roleDiff;
-    return b.overall - a.overall;
+
+    const overallDiff =
+      Number(getPlayerOverall(b)) - Number(getPlayerOverall(a));
+
+    if (!Number.isNaN(overallDiff) && overallDiff !== 0) {
+      return overallDiff;
+    }
+
+    return a.name.localeCompare(b.name);
   });
 
   const recentFixtures = fixtures.slice(0, 4);
@@ -79,24 +156,30 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
 
             <h2>
               {teamDetail.name || teamDetail.team?.name}{" "}
-              <small>({teamDetail.shortName || teamDetail.team?.shortName})</small>
+              <small>
+                ({teamDetail.shortName || teamDetail.team?.shortName})
+              </small>
             </h2>
 
             <div className="team-info-grid">
               <section>
                 <h3>Kezdő 11</h3>
 
-                {starters.length ? (
+                {fallbackStarters.length ? (
                   <div className="team-lineup-list">
-                    {starters.slice(0, 11).map((player) => (
+                    {fallbackStarters.slice(0, 11).map((player) => (
                       <div key={player.id} className="team-lineup-row">
                         <span>
-                          {player.lineupSlot || player.lineupPosition || player.position}
+                          {player.lineupSlot ||
+                            player.lineupPosition ||
+                            player.position}
                         </span>
 
                         <strong>{player.name}</strong>
 
-                        <em>{player.overall}</em>
+                        <span className="team-lineup-ovr">
+                          {getPlayerOverall(player)}
+                        </span>
                       </div>
                     ))}
                   </div>

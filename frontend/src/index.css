@@ -1656,3 +1656,15 @@ select {
     flex-direction: column;
   }
 }
+
+.team-lineup-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.team-lineup-ovr {
+  font-weight: 900;
+  text-align: center;
+  color: #2563eb;
+}

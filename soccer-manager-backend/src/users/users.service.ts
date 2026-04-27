@@ -2300,22 +2300,25 @@ export class UsersService {
         saveTeamId: team.id,
       },
       select: {
-        id: true,
-        name: true,
-        age: true,
-        position: true,
-        overall: true,
-        pace: true,
-        shooting: true,
-        passing: true,
-        dribbling: true,
-        defending: true,
-        physical: true,
-        role: true,
-        lineupPosition: true,
-        lineupSlot: true,
-        marketValue: true,
-      },
+      id: true,
+      name: true,
+      age: true,
+      position: true,
+
+      overall: true,
+      pace: true,
+      shooting: true,
+      passing: true,
+      dribbling: true,
+      defending: true,
+      physical: true,
+
+      role: true,
+      lineupPosition: true,
+      lineupSlot: true,
+      marketValue: true,
+      isTransferListed: true,
+    },
     });
 
     const positionOrder: Record<string, number> = {
@@ -2413,11 +2416,25 @@ export class UsersService {
         saveTeamId: team.id,
       },
       select: {
-        id: true,
-        name: true,
-        age: true,
-        position: true,
-      },
+      id: true,
+      name: true,
+      age: true,
+      position: true,
+
+      overall: true,
+      pace: true,
+      shooting: true,
+      passing: true,
+      dribbling: true,
+      defending: true,
+      physical: true,
+
+      role: true,
+      lineupPosition: true,
+      lineupSlot: true,
+      marketValue: true,
+      isTransferListed: true,
+    },
     });
 
     const positionOrder: Record<string, number> = {

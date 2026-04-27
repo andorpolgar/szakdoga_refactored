@@ -3,61 +3,72 @@ import { getTeamDetail, getTeamFixtures, getTeamPlayers } from "../api/screenApi
 import InlineLoader from "./InlineLoader";
 import EmptyState from "./EmptyState";
 import MatchCard from "./MatchCard";
+import MatchInfoModal from "./MatchInfoModal";
 
-const roleOrder = {
-  starter: 1,
-  bench: 2,
-  reserve: 3,
+const midfieldPositions = ["CM", "CDM", "CAM"];
+
+const getFitData = (player) => {
+  const targetPosition = player.lineupSlot || player.lineupPosition || player.position;
+
+  if (player.position === targetPosition) {
+    return { multiplier: 1, className: "fit-good" };
+  }
+
+  if (
+    midfieldPositions.includes(player.position) &&
+    midfieldPositions.includes(targetPosition)
+  ) {
+    return { multiplier: 0.9, className: "fit-ok" };
+  }
+
+  return { multiplier: 0.75, className: "fit-bad" };
 };
 
 const getPlayerOverall = (player) =>
-  player.overall ??
   player.effectiveOverall ??
-  player.rating ??
-  player.ovr ??
-  player.stats?.overall ??
-  "-";
+  Math.round((player.overall ?? 0) * getFitData(player).multiplier);
 
-const getPlayersFromResponse = (detailData, playersData) => {
-  const playersFromPlayersEndpoint = Array.isArray(playersData)
-    ? playersData
-    : playersData?.players ||
-      playersData?.team?.players ||
-      playersData?.squad?.players ||
-      playersData?.data ||
-      [];
+function PlayerStatsTooltip({ player }) {
+  return (
+    <div className="player-tooltip">
+      <strong>{player.name}</strong>
+      <p>
+        {player.position} | OVR: {player.overall ?? "-"}
+      </p>
 
-  if (playersFromPlayersEndpoint.length) {
-    return playersFromPlayersEndpoint;
-  }
+      {["pace", "shooting", "passing", "dribbling", "defending", "physical"].map(
+        (stat) => (
+          <div key={stat} className="tooltip-stat-row">
+            <span>{stat}</span>
+            <strong>{player[stat] ?? "-"}</strong>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+function PlayerInfoRow({ player }) {
+  const fit = getFitData(player);
 
   return (
-    detailData?.players ||
-    detailData?.team?.players ||
-    detailData?.squad?.players ||
-    []
+    <div className="team-lineup-row player-info-hover-row">
+      <strong>{player.name}</strong>
+      <span>{player.position}</span>
+      <span className={`team-lineup-ovr ${fit.className}`}>
+        {getPlayerOverall(player)}
+      </span>
+
+      <PlayerStatsTooltip player={player} />
+    </div>
   );
-};
-
-const getFixturesFromResponse = (detailData, fixturesData) => {
-  const fixturesFromEndpoint = Array.isArray(fixturesData)
-    ? fixturesData
-    : fixturesData?.fixtures || fixturesData?.data || [];
-
-  if (fixturesFromEndpoint.length) {
-    return fixturesFromEndpoint;
-  }
-
-  return [
-    ...(detailData?.lastFixtures || []),
-    ...(detailData?.upcomingFixtures || []),
-  ];
-};
+}
 
 export default function TeamInfoModal({ saveId, teamId, onClose }) {
   const [teamDetail, setTeamDetail] = useState(null);
   const [players, setPlayers] = useState([]);
   const [fixtures, setFixtures] = useState([]);
+  const [selectedFixture, setSelectedFixture] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -74,8 +85,24 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
     ])
       .then(([detailData, playersData, fixturesData]) => {
         setTeamDetail(detailData);
-        setPlayers(getPlayersFromResponse(detailData, playersData));
-        setFixtures(getFixturesFromResponse(detailData, fixturesData));
+
+        const normalizedPlayers = Array.isArray(playersData)
+          ? playersData
+          : playersData?.players ||
+            playersData?.team?.players ||
+            detailData?.players ||
+            [];
+
+        const normalizedFixtures = Array.isArray(fixturesData)
+          ? fixturesData
+          : fixturesData?.fixtures ||
+            [
+              ...(detailData?.lastFixtures || []),
+              ...(detailData?.upcomingFixtures || []),
+            ];
+
+        setPlayers(normalizedPlayers);
+        setFixtures(normalizedFixtures);
       })
       .catch((err) => {
         setError(
@@ -83,61 +110,17 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
             "Nem sikerült betölteni a csapat adatokat."
         );
       })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      .finally(() => setIsLoading(false));
   }, [saveId, teamId]);
 
-  const starters = [...players]
-    .filter((player) => {
-      const role = String(player.role || "").toLowerCase();
-
-      return (
-        role === "starter" ||
-        role === "starting" ||
-        role === "starting_xi" ||
-        Boolean(player.lineupSlot) ||
-        Boolean(player.lineupPosition)
-      );
-    })
-    .sort((a, b) =>
-      (a.lineupSlot || a.lineupPosition || a.position || "").localeCompare(
-        b.lineupSlot || b.lineupPosition || b.position || ""
-      )
-    );
-
-  const fallbackStarters =
-    starters.length > 0
-      ? starters
-      : [...players]
-          .sort((a, b) => {
-            const overallDiff =
-              Number(getPlayerOverall(b)) - Number(getPlayerOverall(a));
-
-            if (!Number.isNaN(overallDiff) && overallDiff !== 0) {
-              return overallDiff;
-            }
-
-            return a.name.localeCompare(b.name);
-          })
-          .slice(0, 11);
-
-  const squadPlayers = [...players].sort((a, b) => {
-    const roleDiff = (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
-
-    if (roleDiff !== 0) return roleDiff;
-
-    const overallDiff =
-      Number(getPlayerOverall(b)) - Number(getPlayerOverall(a));
-
-    if (!Number.isNaN(overallDiff) && overallDiff !== 0) {
-      return overallDiff;
-    }
-
-    return a.name.localeCompare(b.name);
-  });
-
-  const recentFixtures = fixtures.slice(0, 4);
+  const starters =
+    players.filter(
+      (p) => p.role === "starter" || p.lineupSlot || p.lineupPosition
+    ).length > 0
+      ? players.filter(
+          (p) => p.role === "starter" || p.lineupSlot || p.lineupPosition
+        )
+      : [...players].sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0)).slice(0, 11);
 
   return (
     <div className="modal-backdrop">
@@ -150,75 +133,47 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
           <InlineLoader text="Csapat betöltése..." />
         ) : error ? (
           <p className="error-text">{error}</p>
-        ) : teamDetail ? (
+        ) : (
           <>
             <span className="game-page-kicker">Team Info</span>
-
             <h2>
-              {teamDetail.name || teamDetail.team?.name}{" "}
-              <small>
-                ({teamDetail.shortName || teamDetail.team?.shortName})
-              </small>
+              {teamDetail?.team?.name || teamDetail?.name}
+              <small> ({teamDetail?.team?.shortName || teamDetail?.shortName})</small>
             </h2>
 
             <div className="team-info-grid">
               <section>
                 <h3>Kezdő 11</h3>
 
-                {fallbackStarters.length ? (
-                  <div className="team-lineup-list">
-                    {fallbackStarters.slice(0, 11).map((player) => (
-                      <div key={player.id} className="team-lineup-row">
-                        <span>
-                          {player.lineupSlot ||
-                            player.lineupPosition ||
-                            player.position}
-                        </span>
-
-                        <strong>{player.name}</strong>
-
-                        <span className="team-lineup-ovr">
-                          {getPlayerOverall(player)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState title="Nincs kezdő adat." />
-                )}
+                <div className="team-lineup-list">
+                  {starters.slice(0, 11).map((player) => (
+                    <PlayerInfoRow key={player.id} player={player} />
+                  ))}
+                </div>
               </section>
 
               <section>
                 <h3>Keret</h3>
 
-                {squadPlayers.length ? (
-                  <div className="team-squad-scroll">
-                    {squadPlayers.map((player) => (
-                      <div key={player.id} className="team-squad-row">
-                        <div>
-                          <strong>{player.name}</strong>
-                          <p className="muted-text">
-                            {player.position} | {player.role || "squad"}
-                          </p>
-                        </div>
-
-                        <span>{player.overall}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState title="Nincs keret adat." />
-                )}
+                <div className="team-squad-scroll">
+                  {players.map((player) => (
+                    <PlayerInfoRow key={player.id} player={player} />
+                  ))}
+                </div>
               </section>
             </div>
 
             <section className="team-fixtures-section">
               <h3>Meccsek</h3>
 
-              {recentFixtures.length ? (
+              {fixtures.length ? (
                 <div className="compact-match-list">
-                  {recentFixtures.map((fixture) => (
-                    <MatchCard key={fixture.id} fixture={fixture} />
+                  {fixtures.slice(0, 6).map((fixture) => (
+                    <MatchCard
+                      key={fixture.id}
+                      fixture={fixture}
+                      onClick={() => setSelectedFixture(fixture)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -226,8 +181,14 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
               )}
             </section>
           </>
-        ) : (
-          <EmptyState title="Nincs csapat adat." />
+        )}
+
+        {selectedFixture && (
+          <MatchInfoModal
+            fixture={selectedFixture}
+            saveId={saveId}
+            onClose={() => setSelectedFixture(null)}
+          />
         )}
       </div>
     </div>

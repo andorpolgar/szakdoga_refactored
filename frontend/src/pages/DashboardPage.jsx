@@ -265,8 +265,8 @@ export default function DashboardPage() {
       {selectedFixture && (
         <MatchInfoModal
           fixture={selectedFixture}
+          saveId={activeSaveId}
           onClose={() => setSelectedFixture(null)}
-          onTeamClick={openTeamModal}
         />
       )}
     </div>

@@ -7,6 +7,7 @@ import {
   getSquadScreen,
   getStandingsScreen,
   getTransferScreen,
+  playCurrentRound,
   playMyNextMatch,
   saveSelectedTeamLineup,
   simulateCurrentRound,
@@ -31,6 +32,7 @@ export const useScreenStore = create((set, get) => ({
   isLoadingStandingsScreen: false,
 
   isPlayingMyMatch: false,
+  isPlayingRound: false,
   isSimulatingRound: false,
   isCompletingRound: false,
 
@@ -56,6 +58,7 @@ export const useScreenStore = create((set, get) => ({
       isLoadingStandingsScreen: false,
 
       isPlayingMyMatch: false,
+      isPlayingRound: false,
       isSimulatingRound: false,
       isCompletingRound: false,
 
@@ -490,6 +493,35 @@ export const useScreenStore = create((set, get) => ({
         squadScreenError: getErrorMessage(
           error,
           "Nem sikerült módosítani a formációt."
+        ),
+      });
+
+      throw error;
+    }
+  },
+
+  playRound: async (saveId) => {
+    set({
+      isPlayingRound: true,
+      fixturesScreenError: null,
+    });
+
+    try {
+      const result = await playCurrentRound(saveId);
+
+      await get().loadFixturesScreen(saveId);
+
+      set({
+        isPlayingRound: false,
+      });
+
+      return result;
+    } catch (error) {
+      set({
+        isPlayingRound: false,
+        fixturesScreenError: getErrorMessage(
+          error,
+          "Nem sikerült lejátszani a fordulót."
         ),
       });
 

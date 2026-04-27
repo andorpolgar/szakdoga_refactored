@@ -1,5 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import GameNav from "../components/GameNav";
+import PageHero from "../components/PageHero";
+import EmptyState from "../components/EmptyState";
+import InlineLoader from "../components/InlineLoader";
 import { useGameStore } from "../store/gameStore";
 import { useScreenStore } from "../store/screenStore";
 
@@ -7,9 +10,8 @@ const getMyPlayersFromSquadScreen = (squadScreen) => {
   if (!squadScreen?.lineup) return [];
 
   const starters =
-    squadScreen.lineup.preview
-      ?.map((slot) => slot.player)
-      .filter(Boolean) ?? [];
+    squadScreen.lineup.preview?.map((slot) => slot.player).filter(Boolean) ??
+    [];
 
   const bench = squadScreen.lineup.bench ?? [];
   const reserve = squadScreen.lineup.reserve ?? [];
@@ -22,6 +24,95 @@ const getMyPlayersFromSquadScreen = (squadScreen) => {
 
   return Array.from(playersById.values());
 };
+
+const formatValue = (value) => {
+  if (!value) return "-";
+  return new Intl.NumberFormat("hu-HU").format(value);
+};
+
+function PlayerTooltip({ player }) {
+  return (
+    <div className="player-tooltip squad-list-tooltip">
+      <strong>{player.name}</strong>
+
+      <p>
+        {player.position} | OVR: {player.overall}
+      </p>
+
+      <div className="tooltip-stat-row">
+        <span>Érték</span>
+        <strong>{formatValue(player.marketValue)}</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Pace</span>
+        <strong>{player.pace}</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Shooting</span>
+        <strong>{player.shooting}</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Passing</span>
+        <strong>{player.passing}</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Dribbling</span>
+        <strong>{player.dribbling}</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Defending</span>
+        <strong>{player.defending}</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Physical</span>
+        <strong>{player.physical}</strong>
+      </div>
+    </div>
+  );
+}
+
+function TransferPlayerCard({
+  player,
+  actionLabel,
+  actionClassName,
+  disabled,
+  onAction,
+  meta,
+}) {
+  return (
+    <div className="transfer-player-card">
+      <span className="transfer-player-ovr">{player.overall}</span>
+
+      <div className="transfer-player-main">
+        <strong>{player.name}</strong>
+        <p className="muted-text">
+          {player.position}
+          {meta ? ` | ${meta}` : ""}
+        </p>
+      </div>
+
+      <div className="transfer-player-value">
+        Érték: <strong>{formatValue(player.marketValue)}</strong>
+      </div>
+
+      <button
+        className={actionClassName}
+        disabled={disabled}
+        onClick={() => onAction(player.id)}
+      >
+        {actionLabel}
+      </button>
+
+      <PlayerTooltip player={player} />
+    </div>
+  );
+}
 
 export default function TransferPage() {
   const activeSaveId = useGameStore((state) => state.activeSaveId);
@@ -51,6 +142,11 @@ export default function TransferPage() {
     (state) => state.setPlayerTransferStatus
   );
 
+  const [filters, setFilters] = useState({
+    search: "",
+    position: "ALL",
+  });
+
   useEffect(() => {
     if (!activeSaveId) return;
 
@@ -78,22 +174,49 @@ export default function TransferPage() {
   const myListedPlayers = transferScreen?.myTransferListedPlayers?.players ?? [];
   const recentTransfers = transferScreen?.recentTransferHistory ?? [];
 
-  if (isLoading) {
+  const positionOptions = useMemo(() => {
+    const positions = new Set();
+
+    [...myPlayers, ...marketPlayers].forEach((player) => {
+      if (player.position) positions.add(player.position);
+    });
+
+    return ["ALL", ...Array.from(positions).sort()];
+  }, [myPlayers, marketPlayers]);
+
+  const filterPlayers = (players) =>
+    players.filter((player) => {
+      const matchesSearch = player.name
+        .toLowerCase()
+        .includes(filters.search.toLowerCase());
+
+      const matchesPosition =
+        filters.position === "ALL" || player.position === filters.position;
+
+      return matchesSearch && matchesPosition;
+    });
+
+  const filteredMarketPlayers = filterPlayers(marketPlayers);
+  const filteredMyPlayers = filterPlayers(myPlayers);
+
+  if (isLoading && !transferScreen) {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p>Átigazolások betöltése...</p>
+          <InlineLoader text="Átigazolások betöltése..." />
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !transferScreen) {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p className="error-text">{error}</p>
-          <GameNav />
+          <div className="card">
+            <p className="error-text">{error}</p>
+            <GameNav />
+          </div>
         </div>
       </div>
     );
@@ -103,8 +226,7 @@ export default function TransferPage() {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p>Nincs átigazolási adat.</p>
-          <GameNav />
+          <EmptyState title="Nincs átigazolási adat." />
         </div>
       </div>
     );
@@ -113,99 +235,147 @@ export default function TransferPage() {
   return (
     <div className="page-shell">
       <div className="page-container">
-        <div className="top-row">
+        <PageHero
+          kicker="Transfer Market"
+          title="Átigazolások"
+          subtitle={`${transferScreen.team?.name} (${transferScreen.team?.shortName})`}
+        >
+          <GameNav />
+        </PageHero>
+
+        {error && <p className="error-text">{error}</p>}
+
+        <div className="transfer-filter-card card">
           <div>
-            <h1>Átigazolások</h1>
+            <h2>Játékoskereső</h2>
             <p className="muted-text">
-              {transferScreen.team?.name} ({transferScreen.team?.shortName})
+              Szűrj név vagy pozíció alapján a piac és a saját keret között.
             </p>
           </div>
 
-          <GameNav />
+          <div className="transfer-filter-controls">
+            <input
+              type="text"
+              placeholder="Játékos keresése..."
+              value={filters.search}
+              onChange={(event) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  search: event.target.value,
+                }))
+              }
+            />
+
+            <select
+              value={filters.position}
+              onChange={(event) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  position: event.target.value,
+                }))
+              }
+            >
+              {positionOptions.map((position) => (
+                <option key={position} value={position}>
+                  {position === "ALL" ? "Minden pozíció" : position}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="dashboard-grid">
+        <div className="transfer-layout">
           <section className="card">
-            <h2>Saját keret listázása</h2>
+            <div className="section-heading-row">
+              <div>
+                <h2>Piacon lévő játékosok</h2>
+                <p className="muted-text">
+                  Vásárlás után a játékos automatikusan a keretedbe kerül.
+                </p>
+              </div>
+            </div>
 
-            {myPlayers.length ? (
-              myPlayers.map((player) => (
-                <div key={player.id} className="table-row">
-                  <span>
-                    {player.name} ({player.position}) | OVR: {player.overall} |
-                    Érték: {player.marketValue}
-                  </span>
-
-                  {player.isTransferListed ? (
-                    <button
-                      className="danger-btn"
-                      disabled={isActionRunning}
-                      onClick={() => handleUnlist(player.id)}
-                    >
-                      {isUpdatingTransferStatus
-                        ? "Módosítás..."
-                        : "Levétel a piacról"}
-                    </button>
-                  ) : (
-                    <button
-                      disabled={isActionRunning}
-                      onClick={() => handleList(player.id)}
-                    >
-                      {isUpdatingTransferStatus
-                        ? "Módosítás..."
-                        : "Piacra tesz"}
-                    </button>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p>Nincs betöltött saját játékos.</p>
-            )}
-          </section>
-
-          <section className="card">
-            <h2>Piacon lévő játékosok</h2>
-
-            {marketPlayers.length ? (
-              marketPlayers.map((player) => (
-                <div key={player.id} className="table-row">
-                  <span>
-                    {player.name} ({player.position}) - {player.team?.shortName}
-                    {" | "}OVR: {player.overall}
-                    {" | "}Érték: {player.marketValue}
-                  </span>
-
-                  <button
+            {filteredMarketPlayers.length ? (
+              <div className="transfer-card-grid">
+                {filteredMarketPlayers.map((player) => (
+                  <TransferPlayerCard
+                    key={player.id}
+                    player={player}
+                    meta={player.team?.shortName}
+                    actionLabel={isBuyingPlayer ? "Vásárlás..." : "Megvesz"}
                     disabled={isActionRunning}
-                    onClick={() => handleBuy(player.id)}
-                  >
-                    {isBuyingPlayer ? "Vásárlás..." : "Megvesz"}
-                  </button>
-                </div>
-              ))
+                    onAction={handleBuy}
+                  />
+                ))}
+              </div>
             ) : (
-              <p>
-                Nincs elérhető játékos a piacon. Ez akkor normális, ha még más
-                csapatból senki nincs transfer listán.
-              </p>
+              <EmptyState
+                title="Nincs találat a piacon."
+                description="Próbálj másik keresést vagy pozíciószűrőt."
+              />
             )}
           </section>
 
+          <section className="card">
+            <div className="section-heading-row">
+              <div>
+                <h2>Saját keret</h2>
+                <p className="muted-text">
+                  A játékosokat piacra teheted vagy leveheted a listáról.
+                </p>
+              </div>
+            </div>
+
+            {filteredMyPlayers.length ? (
+              <div className="transfer-card-grid">
+                {filteredMyPlayers.map((player) => (
+                  <TransferPlayerCard
+                    key={player.id}
+                    player={player}
+                    meta={player.role}
+                    actionLabel={
+                      player.isTransferListed
+                        ? isUpdatingTransferStatus
+                          ? "Módosítás..."
+                          : "Levétel"
+                        : isUpdatingTransferStatus
+                          ? "Módosítás..."
+                          : "Piacra tesz"
+                    }
+                    actionClassName={
+                      player.isTransferListed ? "danger-btn" : undefined
+                    }
+                    disabled={isActionRunning}
+                    onAction={
+                      player.isTransferListed ? handleUnlist : handleList
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Nincs találat a saját keretben." />
+            )}
+          </section>
+        </div>
+
+        <div className="transfer-layout secondary-transfer-layout">
           <section className="card">
             <h2>Saját listázott játékosok</h2>
 
             {myListedPlayers.length ? (
-              myListedPlayers.map((player) => (
-                <div key={player.id} className="table-row">
-                  <span>
-                    {player.name} ({player.position})
-                  </span>
+              <div className="listed-player-list">
+                {myListedPlayers.map((player) => (
+                  <div key={player.id} className="listed-player-row">
+                    <span>
+                      <strong>{player.name}</strong> ({player.position})
+                    </span>
 
-                  <strong>{player.marketValue}</strong>
-                </div>
-              ))
+                    <strong>{formatValue(player.marketValue)}</strong>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <p>Nincs saját listázott játékos.</p>
+              <EmptyState title="Nincs saját listázott játékos." />
             )}
           </section>
 
@@ -213,20 +383,27 @@ export default function TransferPage() {
             <h2>Legutóbbi átigazolások</h2>
 
             {recentTransfers.length ? (
-              recentTransfers.map((item) => (
-                <div key={item.id} className="table-row">
-                  <span>
-                    {item.player?.name} - {item.type}
-                  </span>
+              <div className="transfer-history-list">
+                {recentTransfers.map((item) => (
+                  <div key={item.id} className="transfer-history-row">
+                    <div>
+                      <strong>{item.player?.name}</strong>
+                      <p className="muted-text">{item.type}</p>
+                    </div>
 
-                  <strong>{item.marketValue}</strong>
-                </div>
-              ))
+                    <strong>{formatValue(item.marketValue)}</strong>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <p>Még nincs átigazolási előzmény.</p>
+              <EmptyState title="Még nincs átigazolási előzmény." />
             )}
           </section>
         </div>
+
+        {isActionRunning && (
+          <div className="lineup-inline-loading">Átigazolás frissítése...</div>
+        )}
       </div>
     </div>
   );

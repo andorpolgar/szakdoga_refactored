@@ -696,9 +696,7 @@ export class UsersService {
 
   async playRound(gameSaveId: string) {
     const gameSave = await this.prisma.gameSave.findUnique({
-      where: {
-        id: gameSaveId,
-      },
+      where: { id: gameSaveId },
     });
 
     if (!gameSave) {
@@ -708,12 +706,8 @@ export class UsersService {
     const currentRound = gameSave.currentRound;
 
     const lastFixture = await this.prisma.saveFixture.findFirst({
-      where: {
-        gameSaveId,
-      },
-      orderBy: {
-        roundNumber: 'desc',
-      },
+      where: { gameSaveId },
+      orderBy: { roundNumber: 'desc' },
     });
 
     if (!lastFixture) {
@@ -732,10 +726,12 @@ export class UsersService {
         roundNumber: currentRound,
         matchResult: null,
       },
-      orderBy: {
-        createdAt: 'asc',
-      },
+      orderBy: { createdAt: 'asc' },
     });
+
+    if (fixtures.length === 0) {
+      throw new BadRequestException('Current round is already played');
+    }
 
     for (const fixture of fixtures) {
       const simulation = await this.simulateFixtureScore(
@@ -752,12 +748,52 @@ export class UsersService {
       );
     }
 
+    const playedFixtures = await this.prisma.saveFixture.findMany({
+      where: {
+        gameSaveId,
+        roundNumber: currentRound,
+      },
+      include: {
+        matchResult: true,
+        homeTeam: {
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+          },
+        },
+        awayTeam: {
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
     await this.tryAdvanceRoundIfRoundFinished(gameSaveId, currentRound);
+
+    const mappedFixtures = playedFixtures.map((fixture) =>
+      this.mapFixtureForResponse(fixture),
+    );
+
+    const myFixture =
+      mappedFixtures.find(
+        (fixture) =>
+          fixture.homeTeam.id === gameSave.selectedTeamId ||
+          fixture.awayTeam.id === gameSave.selectedTeamId,
+      ) ?? null;
 
     return {
       message: 'Round played successfully',
       roundNumber: currentRound,
-      matchesPlayed: fixtures.length,
+      matchesPlayed: mappedFixtures.length,
+      myFixture,
+      fixtures: mappedFixtures,
     };
   }
 
@@ -1104,14 +1140,21 @@ export class UsersService {
   }
 
   async getFixturesScreen(saveId: string) {
-    const [actionSummary, myMatch, otherResults, seasonState, roundsOverview] =
-      await Promise.all([
-        this.getCurrentRoundActionSummary(saveId),
-        this.getCurrentRoundMyMatchResult(saveId),
-        this.getCurrentRoundOtherResults(saveId),
-        this.getSeasonState(saveId),
-        this.getRoundsOverview(saveId),
-      ]);
+    const [
+      actionSummary,
+      myMatch,
+      otherResults,
+      seasonState,
+      roundsOverview,
+      standings,
+    ] = await Promise.all([
+      this.getCurrentRoundActionSummary(saveId),
+      this.getCurrentRoundMyMatchResult(saveId),
+      this.getCurrentRoundOtherResults(saveId),
+      this.getSeasonState(saveId),
+      this.getRoundsOverview(saveId),
+      this.getSaveStandings(saveId),
+    ]);
 
     return {
       screen: 'FIXTURES',
@@ -1121,6 +1164,7 @@ export class UsersService {
       otherMatches: otherResults,
       actions: actionSummary.actions,
       roundsOverview,
+      standings,
     };
   }
 
@@ -2025,12 +2069,11 @@ export class UsersService {
 
   async getRoundsOverview(saveId: string) {
     const gameSave = await this.prisma.gameSave.findUnique({
-      where: {
-        id: saveId,
-      },
+      where: { id: saveId },
       select: {
         id: true,
         currentRound: true,
+        selectedTeamId: true,
       },
     });
 
@@ -2044,14 +2087,24 @@ export class UsersService {
       },
       include: {
         matchResult: true,
+        homeTeam: {
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+          },
+        },
+        awayTeam: {
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+          },
+        },
       },
       orderBy: [
-        {
-          roundNumber: 'asc',
-        },
-        {
-          createdAt: 'asc',
-        },
+        { roundNumber: 'asc' },
+        { createdAt: 'asc' },
       ],
     });
 
@@ -2067,27 +2120,37 @@ export class UsersService {
         playedFixtures: number;
         isCompleted: boolean;
         isCurrent: boolean;
+        selectedTeamFixture: any;
       }
     >();
 
     for (const fixture of fixtures) {
-      const existing = roundsMap.get(fixture.roundNumber);
-
-      if (!existing) {
-        roundsMap.set(fixture.roundNumber, {
+      const existing =
+        roundsMap.get(fixture.roundNumber) ??
+        {
           roundNumber: fixture.roundNumber,
-          totalFixtures: 1,
-          playedFixtures: fixture.matchResult ? 1 : 0,
+          totalFixtures: 0,
+          playedFixtures: 0,
           isCompleted: false,
           isCurrent: fixture.roundNumber === gameSave.currentRound,
-        });
-      } else {
-        existing.totalFixtures += 1;
+          selectedTeamFixture: null,
+        };
 
-        if (fixture.matchResult) {
-          existing.playedFixtures += 1;
-        }
+      existing.totalFixtures += 1;
+
+      if (fixture.matchResult) {
+        existing.playedFixtures += 1;
       }
+
+      if (
+        gameSave.selectedTeamId &&
+        (fixture.homeTeam.id === gameSave.selectedTeamId ||
+          fixture.awayTeam.id === gameSave.selectedTeamId)
+      ) {
+        existing.selectedTeamFixture = this.mapFixtureForResponse(fixture);
+      }
+
+      roundsMap.set(fixture.roundNumber, existing);
     }
 
     const rounds = Array.from(roundsMap.values()).map((round) => ({

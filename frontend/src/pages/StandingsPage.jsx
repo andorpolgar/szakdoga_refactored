@@ -1,5 +1,9 @@
 import { useEffect } from "react";
 import GameNav from "../components/GameNav";
+import PageHero from "../components/PageHero";
+import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
+import InlineLoader from "../components/InlineLoader";
 import { useGameStore } from "../store/gameStore";
 import { useScreenStore } from "../store/screenStore";
 
@@ -17,21 +21,23 @@ export default function StandingsPage() {
     loadStandingsScreen(activeSaveId).catch(() => {});
   }, [activeSaveId, loadStandingsScreen]);
 
-  if (isLoading) {
+  if (isLoading && !standingsScreen) {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p>Tabella betöltése...</p>
+          <InlineLoader text="Tabella betöltése..." />
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !standingsScreen) {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p className="error-text">{error}</p>
+          <div className="card">
+            <p className="error-text">{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -41,40 +47,115 @@ export default function StandingsPage() {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p>Nincs tabella adat.</p>
+          <EmptyState title="Nincs tabella adat." />
         </div>
       </div>
     );
   }
 
+  const table = standingsScreen.table || [];
+  const leader = table[0];
+  const ownTeam =
+    table.find((row) => row.team?.id === standingsScreen.team?.id) ||
+    table.find((row) => row.team?.shortName === standingsScreen.team?.shortName);
+
   return (
     <div className="page-shell">
       <div className="page-container">
-        <div className="top-row">
-          <div>
-            <h1>Tabella</h1>
-            <p className="muted-text">
-              Szezon: {standingsScreen.season?.currentRound}/
-              {standingsScreen.season?.totalRounds}
-            </p>
-          </div>
-
+        <PageHero
+          kicker="League Table"
+          title="Tabella"
+          subtitle={`Szezon: ${standingsScreen.season?.currentRound}/${standingsScreen.season?.totalRounds}`}
+        >
           <GameNav />
+        </PageHero>
+
+        {error && <p className="error-text">{error}</p>}
+
+        <div className="stat-grid">
+          <StatCard
+            label="Éllovas"
+            value={leader ? leader.team.shortName : "-"}
+            helper={leader ? `${leader.points} pont` : "Nincs adat"}
+          />
+
+          <StatCard
+            label="Saját helyezés"
+            value={ownTeam ? `${ownTeam.position}.` : "-"}
+            helper={ownTeam ? `${ownTeam.points} pont` : "Nincs adat"}
+          />
+
+          <StatCard
+            label="Forduló"
+            value={`${standingsScreen.season?.currentRound ?? "-"}/${
+              standingsScreen.season?.totalRounds ?? "-"
+            }`}
+            helper="Szezon állása"
+          />
         </div>
 
         <section className="card">
-          <h2>Bajnoki tabella</h2>
-
-          {standingsScreen.table?.map((row) => (
-            <div key={row.team.id} className="table-row">
-              <span>
-                {row.position}. {row.team.name} ({row.team.shortName}) |{" "}
-                {row.wins}-{row.draws}-{row.losses} | GD:{" "}
-                {row.goalDifference}
-              </span>
-              <strong>{row.points} pont</strong>
+          <div className="section-heading-row">
+            <div>
+              <h2>Bajnoki tabella</h2>
             </div>
-          ))}
+          </div>
+
+          {table.length ? (
+            <div className="standings-table">
+              <div className="standings-header">
+                <span>#</span>
+                <span>Csapat</span>
+                <span>J</span>
+                <span>Gy</span>
+                <span>D</span>
+                <span>V</span>
+                <span>GF</span>
+                <span>GA</span>
+                <span>GD</span>
+                <span>P</span>
+              </div>
+
+              {table.map((row) => {
+                const isOwnTeam =
+                  row.team?.id === standingsScreen.team?.id ||
+                  row.team?.shortName === standingsScreen.team?.shortName;
+
+                return (
+                  <div
+                    key={row.team.id}
+                    className={`standings-row ${isOwnTeam ? "own-standing-row" : ""}`}
+                  >
+                    <span className="standing-position">
+                      {row.position <= 3 ? (
+                        <strong className={`podium-badge podium-${row.position}`}>
+                          {row.position}
+                        </strong>
+                      ) : (
+                        row.position
+                      )}
+                    </span>
+
+                    <span className="standing-team">
+                      <strong>{row.team.name}</strong>
+                      <small>{row.team.shortName}</small>
+                    </span>
+
+                    <span>{row.played}</span>
+                    <span>{row.wins}</span>
+                    <span>{row.draws}</span>
+                    <span>{row.losses}</span>
+                    <span>{row.goalsFor}</span>
+                    <span>{row.goalsAgainst}</span>
+                    <span>{row.goalDifference}</span>
+                    <strong>{row.points}</strong>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState title="Nincs megjeleníthető tabella." />
+          )}
         </section>
       </div>
     </div>

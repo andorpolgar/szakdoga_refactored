@@ -111,3 +111,8 @@ export const updateSelectedTeamFormation = async (saveId, formation) => {
 
   return data;
 };
+
+export const playCurrentRound = async (saveId) => {
+  const { data } = await http.post(`/match/saves/${saveId}/play-round`);
+  return data;
+};

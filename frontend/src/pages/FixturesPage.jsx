@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import GameNav from "../components/GameNav";
+import PageHero from "../components/PageHero";
+import MatchCard from "../components/MatchCard";
+import EmptyState from "../components/EmptyState";
+import InlineLoader from "../components/InlineLoader";
 import { useGameStore } from "../store/gameStore";
 import { useScreenStore } from "../store/screenStore";
 
@@ -10,63 +14,51 @@ export default function FixturesPage() {
   const isLoading = useScreenStore((state) => state.isLoadingFixturesScreen);
   const error = useScreenStore((state) => state.fixturesScreenError);
 
-  const isPlayingMyMatch = useScreenStore((state) => state.isPlayingMyMatch);
-  const isSimulatingRound = useScreenStore((state) => state.isSimulatingRound);
-  const isCompletingRound = useScreenStore((state) => state.isCompletingRound);
-
+  const isPlayingRound = useScreenStore((state) => state.isPlayingRound);
   const loadFixturesScreen = useScreenStore((state) => state.loadFixturesScreen);
-  const playMyMatch = useScreenStore((state) => state.playMyMatch);
-  const simulateRestOfRound = useScreenStore(
-    (state) => state.simulateRestOfRound
-  );
-  const completeRound = useScreenStore((state) => state.completeRound);
+  const playRound = useScreenStore((state) => state.playRound);
 
-  const [manualResult, setManualResult] = useState({
-    homeGoals: 1,
-    awayGoals: 0,
-  });
+  const [roundSummary, setRoundSummary] = useState(null);
 
   useEffect(() => {
     loadFixturesScreen(activeSaveId).catch(() => {});
   }, [activeSaveId, loadFixturesScreen]);
 
   const myFixture = fixturesScreen?.myMatch?.fixture;
-  const actions = fixturesScreen?.actions;
+  const standings = fixturesScreen?.standings || [];
 
-  const handlePlayMyMatch = async () => {
-    await playMyMatch(activeSaveId, {
-      homeGoals: Number(manualResult.homeGoals),
-      awayGoals: Number(manualResult.awayGoals),
-    }).catch(() => {});
+  const playedOtherMatches = fixturesScreen?.otherMatches?.played || [];
+  const remainingOtherMatches = fixturesScreen?.otherMatches?.remaining || [];
+  const allOtherMatches = [...playedOtherMatches, ...remainingOtherMatches];
+
+  const canPlayRound = Number(fixturesScreen?.round?.remainingFixtures || 0) > 0;
+
+  const handlePlayRound = async () => {
+    const result = await playRound(activeSaveId).catch(() => null);
+
+    if (result) {
+      setRoundSummary(result);
+    }
   };
 
-  const handleSimulateRest = async () => {
-    await simulateRestOfRound(activeSaveId).catch(() => {});
-  };
-
-  const handleCompleteRound = async () => {
-    await completeRound(activeSaveId).catch(() => {});
-  };
-
-  const isActionRunning =
-    isPlayingMyMatch || isSimulatingRound || isCompletingRound;
-
-  if (isLoading) {
+  if (isLoading && !fixturesScreen) {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p>Meccsek betöltése...</p>
+          <InlineLoader text="Meccsek betöltése..." />
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !fixturesScreen) {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p className="error-text">{error}</p>
-          <GameNav />
+          <div className="card">
+            <p className="error-text">{error}</p>
+            <GameNav />
+          </div>
         </div>
       </div>
     );
@@ -76,8 +68,7 @@ export default function FixturesPage() {
     return (
       <div className="page-shell">
         <div className="page-container">
-          <p>Nincs meccs adat.</p>
-          <GameNav />
+          <EmptyState title="Nincs meccs adat." />
         </div>
       </div>
     );
@@ -86,150 +77,166 @@ export default function FixturesPage() {
   return (
     <div className="page-shell">
       <div className="page-container">
-        <div className="top-row">
-          <div>
-            <h1>Meccsek</h1>
-            <p className="muted-text">
-              Forduló: {fixturesScreen.round?.roundNumber}
-            </p>
-          </div>
-
+        <PageHero
+          kicker="Match Center"
+          title="Meccsek"
+          subtitle={`Forduló: ${fixturesScreen.round?.roundNumber || "-"}`}
+        >
           <GameNav />
-        </div>
+        </PageHero>
 
-        <div className="dashboard-grid">
-          <section className="card">
-            <h2>Saját meccs</h2>
+        {error && <p className="error-text">{error}</p>}
+
+        <div className="fixtures-layout">
+          <section className="card fixture-main-card">
+            <div className="section-heading-row">
+              <div>
+                <h2>Saját meccs</h2>
+                <p className="muted-text">
+                  A forduló összes mérkőzése egyszerre szimulálódik.
+                </p>
+              </div>
+            </div>
 
             {myFixture ? (
               <>
-                <p>
-                  {myFixture.homeTeam?.name} - {myFixture.awayTeam?.name}
-                </p>
+                <MatchCard fixture={myFixture} />
 
-                <p>
-                  Eredmény:{" "}
-                  {myFixture.isPlayed
-                    ? `${myFixture.homeGoals}-${myFixture.awayGoals}`
-                    : "nincs lejátszva"}
-                </p>
-
-                {!myFixture.isPlayed && (
-                  <div className="form-stack">
-                    <input
-                      type="number"
-                      min="0"
-                      max="20"
-                      value={manualResult.homeGoals}
-                      onChange={(e) =>
-                        setManualResult((prev) => ({
-                          ...prev,
-                          homeGoals: e.target.value,
-                        }))
-                      }
-                    />
-
-                    <input
-                      type="number"
-                      min="0"
-                      max="20"
-                      value={manualResult.awayGoals}
-                      onChange={(e) =>
-                        setManualResult((prev) => ({
-                          ...prev,
-                          awayGoals: e.target.value,
-                        }))
-                      }
-                    />
-
-                    <button
-                      disabled={!actions?.canPlayMyMatch || isActionRunning}
-                      onClick={handlePlayMyMatch}
-                    >
-                      {isPlayingMyMatch
-                        ? "Meccs lejátszása..."
-                        : "Saját meccs lejátszása"}
-                    </button>
+                {canPlayRound ? (
+                  <button disabled={isPlayingRound} onClick={handlePlayRound}>
+                    {isPlayingRound
+                      ? "Forduló szimulálása..."
+                      : "Forduló lejátszása"}
+                  </button>
+                ) : (
+                  <div className="success-text">
+                    A forduló mérkőzései lejátszva.
                   </div>
                 )}
               </>
             ) : (
-              <p>Nincs saját meccs.</p>
+              <EmptyState title="Nincs saját meccs ebben a fordulóban." />
+            )}
+          </section>
+
+          <section className="card fixtures-standings-card">
+            <h2>Tabella</h2>
+
+            {standings.length ? (
+              <div className="fixtures-standings-scroll">
+                {standings.map((row) => (
+                  <div
+                    key={row.team.id}
+                    className={`fixtures-standings-row ${
+                      row.team.id === fixturesScreen.myMatch?.team?.id
+                        ? "own-team-row"
+                        : ""
+                    }`}
+                  >
+                    <span>
+                      {row.position}. {row.team.shortName}
+                    </span>
+
+                    <strong>{row.points}p</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Nincs tabella adat." />
+            )}
+          </section>
+        </div>
+
+        <div className="fixtures-layout secondary-fixtures-layout">
+          <section className="card">
+            <h2>Többi meccs</h2>
+
+            {allOtherMatches.length ? (
+              <div className="compact-match-list">
+                {allOtherMatches.map((fixture) => (
+                  <MatchCard key={fixture.id} fixture={fixture} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Nincs további meccs." />
             )}
           </section>
 
           <section className="card">
-            <h2>Forduló akciók</h2>
+            <h2>Saját meccsek fordulónként</h2>
 
-            <p>Összes meccs: {fixturesScreen.round?.totalFixtures}</p>
-            <p>Lejátszott: {fixturesScreen.round?.playedFixtures}</p>
-            <p>Hátralévő: {fixturesScreen.round?.remainingFixtures}</p>
+            {fixturesScreen.roundsOverview?.rounds?.length ? (
+              <div className="round-list">
+                {fixturesScreen.roundsOverview.rounds.map((round) => (
+                  <div
+                    key={round.roundNumber}
+                    className={`round-card ${
+                      round.isCurrent ? "current-round-card" : ""
+                    }`}
+                  >
+                    <div>
+                      <strong>{round.roundNumber}. forduló</strong>
+                      {round.isCurrent && <span>Aktuális</span>}
 
-            <div className="form-stack">
-              <button
-                disabled={
-                  !actions?.canSimulateRemainingFixtures || isActionRunning
-                }
-                onClick={handleSimulateRest}
-              >
-                {isSimulatingRound
-                  ? "Szimulálás..."
-                  : "Többi meccs szimulálása"}
-              </button>
+                      {round.selectedTeamFixture && (
+                        <p className="muted-text">
+                          {round.selectedTeamFixture.homeTeam.shortName} -{" "}
+                          {round.selectedTeamFixture.awayTeam.shortName}
+                        </p>
+                      )}
+                    </div>
 
-              <button
-                disabled={!actions?.canCompleteCurrentRound || isActionRunning}
-                onClick={handleCompleteRound}
-              >
-                {isCompletingRound
-                  ? "Forduló befejezése..."
-                  : "Forduló befejezése automatikusan"}
-              </button>
-            </div>
-          </section>
-
-          <section className="card">
-            <h2>Többi meccs</h2>
-
-            {fixturesScreen.otherMatches?.played?.map((fixture) => (
-              <div key={fixture.id} className="fixture-row">
-                <span>
-                  {fixture.homeTeam.shortName} - {fixture.awayTeam.shortName}
-                </span>
-                <strong>
-                  {fixture.homeGoals}-{fixture.awayGoals}
-                </strong>
+                    <p>
+                      {round.selectedTeamFixture?.isPlayed
+                        ? `${round.selectedTeamFixture.homeGoals}-${round.selectedTeamFixture.awayGoals}`
+                        : "nincs eredmény"}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
-
-            {fixturesScreen.otherMatches?.remaining?.map((fixture) => (
-              <div key={fixture.id} className="fixture-row">
-                <span>
-                  {fixture.homeTeam.shortName} - {fixture.awayTeam.shortName}
-                </span>
-                <strong>nincs eredmény</strong>
-              </div>
-            ))}
-          </section>
-
-          <section className="card">
-            <h2>Fordulók</h2>
-
-            {fixturesScreen.roundsOverview?.rounds?.map((round) => (
-              <div key={round.roundNumber} className="table-row">
-                <span>
-                  {round.roundNumber}. forduló{" "}
-                  {round.isCurrent ? "(aktuális)" : ""}
-                </span>
-
-                <strong>
-                  {round.playedFixtures}/{round.totalFixtures}
-                </strong>
-              </div>
-            ))}
+            ) : (
+              <EmptyState title="Nincs forduló áttekintés." />
+            )}
           </section>
         </div>
       </div>
+
+      {roundSummary && (
+        <div className="modal-backdrop">
+          <div className="round-summary-modal">
+            <button
+              className="modal-close-btn"
+              onClick={() => setRoundSummary(null)}
+            >
+              ×
+            </button>
+
+            <span className="game-page-kicker">Round Summary</span>
+            <h2>{roundSummary.roundNumber}. forduló eredményei</h2>
+
+            {roundSummary.myFixture && (
+              <div className="round-summary-section">
+                <h3>Saját meccs</h3>
+                <MatchCard fixture={roundSummary.myFixture} />
+              </div>
+            )}
+
+            <div className="round-summary-section">
+              <h3>Többi meccs</h3>
+
+              <div className="compact-match-list">
+                {roundSummary.fixtures
+                  ?.filter(
+                    (fixture) => fixture.id !== roundSummary.myFixture?.id
+                  )
+                  .map((fixture) => (
+                    <MatchCard key={fixture.id} fixture={fixture} />
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

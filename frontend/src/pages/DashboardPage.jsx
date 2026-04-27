@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState  } from "react";
 import { useNavigate } from "react-router-dom";
 import GameNav from "../components/GameNav";
 import PageHero from "../components/PageHero";
@@ -9,6 +9,8 @@ import InlineLoader from "../components/InlineLoader";
 import { useAuthStore } from "../store/authStore";
 import { useDashboardStore } from "../store/dashboardStore";
 import { useGameStore } from "../store/gameStore";
+import TeamInfoModal from "../components/TeamInfoModal";
+import MatchInfoModal from "../components/MatchInfoModal";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -25,6 +27,21 @@ export default function DashboardPage() {
   const dashboardError = useDashboardStore((state) => state.dashboardError);
   const loadDashboard = useDashboardStore((state) => state.loadDashboard);
   const resetDashboard = useDashboardStore((state) => state.resetDashboard);
+
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const [selectedFixture, setSelectedFixture] = useState(null);
+
+  const openTeamModal = (teamId) => {
+    if (!teamId) return;
+    setSelectedFixture(null);
+    setSelectedTeamId(teamId);
+  };
+
+  const openMatchModal = (fixture) => {
+    if (!fixture) return;
+    setSelectedTeamId(null);
+    setSelectedFixture(fixture);
+  };
 
   useEffect(() => {
     if (!activeSaveId) {
@@ -155,7 +172,11 @@ export default function DashboardPage() {
             </div>
 
             {nextFixture ? (
-              <MatchCard fixture={nextFixture} />
+              <MatchCard
+                fixture={nextFixture}
+                onClick={() => openMatchModal(nextFixture)}
+                onTeamClick={openTeamModal}
+              />
             ) : (
               <EmptyState
                 title="Nincs saját meccs az aktuális fordulóban."
@@ -178,7 +199,10 @@ export default function DashboardPage() {
                   row.team.id === dashboard.selectedTeam?.id ? "own-team-row" : ""
                 }`}
               >
-                <span>
+                <span
+                  className="clickable-team"
+                  onClick={() => openTeamModal(row.team.id)}
+                >
                   {row.position}. {row.team.name}
                 </span>
 
@@ -197,7 +221,12 @@ export default function DashboardPage() {
             {dashboard.currentRoundFixtures?.length ? (
               <div className="compact-match-list">
                 {dashboard.currentRoundFixtures.map((fixture) => (
-                  <MatchCard key={fixture.id} fixture={fixture} />
+                  <MatchCard
+                    key={fixture.id}
+                    fixture={fixture}
+                    onClick={() => openMatchModal(fixture)}
+                    onTeamClick={openTeamModal}
+                  />
                 ))}
               </div>
             ) : (
@@ -211,7 +240,12 @@ export default function DashboardPage() {
             {dashboard.lastRoundFixtures?.length ? (
               <div className="compact-match-list">
                 {dashboard.lastRoundFixtures.map((fixture) => (
-                  <MatchCard key={fixture.id} fixture={fixture} />
+                  <MatchCard
+                    key={fixture.id}
+                    fixture={fixture}
+                    onClick={() => openMatchModal(fixture)}
+                    onTeamClick={openTeamModal}
+                  />
                 ))}
               </div>
             ) : (
@@ -220,6 +254,21 @@ export default function DashboardPage() {
           </section>
         </div>
       </div>
+      {selectedTeamId && (
+        <TeamInfoModal
+          saveId={activeSaveId}
+          teamId={selectedTeamId}
+          onClose={() => setSelectedTeamId(null)}
+        />
+      )}
+
+      {selectedFixture && (
+        <MatchInfoModal
+          fixture={selectedFixture}
+          onClose={() => setSelectedFixture(null)}
+          onTeamClick={openTeamModal}
+        />
+      )}
     </div>
   );
 }

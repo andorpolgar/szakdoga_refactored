@@ -116,3 +116,22 @@ export const playCurrentRound = async (saveId) => {
   const { data } = await http.post(`/match/saves/${saveId}/play-round`);
   return data;
 };
+
+export const getTeamDetail = async (saveId, teamId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/teams/${teamId}`);
+  return data;
+};
+
+export const getTeamPlayers = async (saveId, teamId) => {
+  const { data } = await http.get(
+    `/users/saves/${saveId}/teams/${teamId}/players`
+  );
+  return data;
+};
+
+export const getTeamFixtures = async (saveId, teamId) => {
+  const { data } = await http.get(
+    `/users/saves/${saveId}/teams/${teamId}/fixtures`
+  );
+  return data;
+};

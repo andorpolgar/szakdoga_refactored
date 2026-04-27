@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import GameNav from "../components/GameNav";
 import PageHero from "../components/PageHero";
 import StatCard from "../components/StatCard";
@@ -6,6 +6,7 @@ import EmptyState from "../components/EmptyState";
 import InlineLoader from "../components/InlineLoader";
 import { useGameStore } from "../store/gameStore";
 import { useScreenStore } from "../store/screenStore";
+import TeamInfoModal from "../components/TeamInfoModal";
 
 export default function StandingsPage() {
   const activeSaveId = useGameStore((state) => state.activeSaveId);
@@ -13,9 +14,16 @@ export default function StandingsPage() {
   const standingsScreen = useScreenStore((state) => state.standingsScreen);
   const isLoading = useScreenStore((state) => state.isLoadingStandingsScreen);
   const error = useScreenStore((state) => state.standingsScreenError);
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
+
   const loadStandingsScreen = useScreenStore(
     (state) => state.loadStandingsScreen
   );
+
+  const openTeamModal = (teamId) => {
+    if (!teamId) return;
+    setSelectedTeamId(teamId);
+  };
 
   useEffect(() => {
     loadStandingsScreen(activeSaveId).catch(() => {});
@@ -136,7 +144,10 @@ export default function StandingsPage() {
                       )}
                     </span>
 
-                    <span className="standing-team">
+                    <span
+                      className="standing-team clickable-team"
+                      onClick={() => openTeamModal(row.team.id)}
+                    >
                       <strong>{row.team.name}</strong>
                       <small>{row.team.shortName}</small>
                     </span>
@@ -149,6 +160,13 @@ export default function StandingsPage() {
                     <span>{row.goalsAgainst}</span>
                     <span>{row.goalDifference}</span>
                     <strong>{row.points}</strong>
+                    {selectedTeamId && (
+                      <TeamInfoModal
+                        saveId={activeSaveId}
+                        teamId={selectedTeamId}
+                        onClose={() => setSelectedTeamId(null)}
+                      />
+                    )}
                   </div>
                 );
               })}

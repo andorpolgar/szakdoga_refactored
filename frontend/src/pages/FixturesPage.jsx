@@ -6,6 +6,8 @@ import EmptyState from "../components/EmptyState";
 import InlineLoader from "../components/InlineLoader";
 import { useGameStore } from "../store/gameStore";
 import { useScreenStore } from "../store/screenStore";
+import TeamInfoModal from "../components/TeamInfoModal";
+import MatchInfoModal from "../components/MatchInfoModal";
 
 export default function FixturesPage() {
   const activeSaveId = useGameStore((state) => state.activeSaveId);
@@ -19,6 +21,9 @@ export default function FixturesPage() {
   const playRound = useScreenStore((state) => state.playRound);
 
   const [roundSummary, setRoundSummary] = useState(null);
+
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const [selectedFixture, setSelectedFixture] = useState(null);
 
   useEffect(() => {
     loadFixturesScreen(activeSaveId).catch(() => {});
@@ -39,6 +44,18 @@ export default function FixturesPage() {
     if (result) {
       setRoundSummary(result);
     }
+  };
+
+  const openTeamModal = (teamId) => {
+    if (!teamId) return;
+    setSelectedFixture(null);
+    setSelectedTeamId(teamId);
+  };
+
+  const openMatchModal = (fixture) => {
+    if (!fixture) return;
+    setSelectedTeamId(null);
+    setSelectedFixture(fixture);
   };
 
   if (isLoading && !fixturesScreen) {
@@ -100,7 +117,11 @@ export default function FixturesPage() {
 
             {myFixture ? (
               <>
-                <MatchCard fixture={myFixture} />
+                <MatchCard
+                  fixture={myFixture}
+                  onClick={() => openMatchModal(myFixture)}
+                  onTeamClick={openTeamModal}
+                />
 
                 {canPlayRound ? (
                   <button disabled={isPlayingRound} onClick={handlePlayRound}>
@@ -133,7 +154,10 @@ export default function FixturesPage() {
                         : ""
                     }`}
                   >
-                    <span>
+                    <span
+                      className="clickable-team"
+                      onClick={() => openTeamModal(row.team.id)}
+                    >
                       {row.position}. {row.team.shortName}
                     </span>
 
@@ -154,7 +178,11 @@ export default function FixturesPage() {
             {allOtherMatches.length ? (
               <div className="compact-match-list">
                 {allOtherMatches.map((fixture) => (
-                  <MatchCard key={fixture.id} fixture={fixture} />
+                  <MatchCard
+                    fixture={fixture}
+                    onClick={() => openMatchModal(fixture)}
+                    onTeamClick={openTeamModal}
+                  />
                 ))}
               </div>
             ) : (
@@ -217,7 +245,11 @@ export default function FixturesPage() {
             {roundSummary.myFixture && (
               <div className="round-summary-section">
                 <h3>Saját meccs</h3>
-                <MatchCard fixture={roundSummary.myFixture} />
+                <MatchCard
+                  fixture={myFixture}
+                  onClick={() => openMatchModal(myFixture)}
+                  onTeamClick={openTeamModal}
+                />
               </div>
             )}
 
@@ -230,12 +262,32 @@ export default function FixturesPage() {
                     (fixture) => fixture.id !== roundSummary.myFixture?.id
                   )
                   .map((fixture) => (
-                    <MatchCard key={fixture.id} fixture={fixture} />
+                    <MatchCard
+                      fixture={fixture}
+                      onClick={() => openMatchModal(fixture)}
+                      onTeamClick={openTeamModal}
+                    />
                   ))}
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {selectedTeamId && (
+        <TeamInfoModal
+          saveId={activeSaveId}
+          teamId={selectedTeamId}
+          onClose={() => setSelectedTeamId(null)}
+        />
+      )}
+
+      {selectedFixture && (
+        <MatchInfoModal
+          fixture={selectedFixture}
+          onClose={() => setSelectedFixture(null)}
+          onTeamClick={openTeamModal}
+        />
       )}
     </div>
   );

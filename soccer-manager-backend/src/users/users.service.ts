@@ -4231,8 +4231,20 @@ export class UsersService {
 
       finalLineup[tiredPlayerIndex] = {
         ...replacement,
+        tacticalPosition: tiredPlayer.tacticalPosition,
+        playedPosition: tiredPlayer.playedPosition,
+        positionMultiplier: this.getSquadPageFitMultiplier(
+          replacement.position,
+          tiredPlayer.tacticalPosition,
+        ),
         stamina: 100,
-        effectiveOverall: replacement.overall,
+        effectiveOverall: Math.round(
+          replacement.overall *
+            this.getSquadPageFitMultiplier(
+              replacement.position,
+              tiredPlayer.tacticalPosition,
+            ),
+        ),
       };
 
       finalBench.splice(selectedBenchIndex, 1);
@@ -4262,7 +4274,10 @@ export class UsersService {
       return {
         ...player,
         stamina,
-        effectiveOverall: Math.max(40, player.overall - fatiguePenalty),
+        effectiveOverall: Math.max(
+          40,
+          Math.round((player.overall * (player.positionMultiplier ?? 1)) - fatiguePenalty),
+        ),
       };
     });
 
@@ -4285,6 +4300,10 @@ export class UsersService {
         formation: true,
       },
     });
+
+    const formation = isSupportedFormation(team?.formation ?? '')
+      ? (team?.formation as SupportedFormation)
+      : '4-3-3';
 
     const players = await this.prisma.savePlayer.findMany({
       where: {
@@ -4310,42 +4329,54 @@ export class UsersService {
       },
     });
 
-    const formation = isSupportedFormation(team?.formation ?? '')
-    ? (team?.formation as SupportedFormation)
-    : '4-3-3';
+    const slots = getFormationSlots(formation);
+    const usedPlayerIds = new Set<string>();
 
-  const lineup = players
-    .filter((player) => player.role === 'starter')
-    .slice(0, 11)
-    .map((player) => {
-      const slotDefinition = player.lineupSlot
-        ? getSlotDefinition(formation, player.lineupSlot)
-        : null;
+    const lineup = slots
+      .map((slot) => {
+        const player =
+          players.find(
+            (item) =>
+              item.role === 'starter' &&
+              item.lineupSlot === slot.slotId &&
+              !usedPlayerIds.has(item.id),
+          ) ||
+          players.find(
+            (item) =>
+              item.role === 'starter' &&
+              item.lineupPosition === slot.tacticalPosition &&
+              !usedPlayerIds.has(item.id),
+          );
 
-      const tacticalPosition =
-        slotDefinition?.tacticalPosition ??
-        player.lineupPosition ??
-        player.position;
+        if (!player) return null;
 
-      const multiplier = getPositionCompatibilityMultiplier(
-        player.position as PlayerPosition,
-        tacticalPosition as PlayerPosition,
-      );
+        usedPlayerIds.add(player.id);
 
-      return {
-        ...player,
-        tacticalPosition,
-        positionMultiplier: multiplier,
-        stamina: 100,
-        effectiveOverall: Math.round(player.overall * multiplier),
-      };
-    });
+        const multiplier = this.getSquadPageFitMultiplier(
+          player.position,
+          slot.tacticalPosition,
+        );
+
+        return {
+          ...player,
+          lineupSlot: slot.slotId,
+          tacticalPosition: slot.tacticalPosition,
+          playedPosition: slot.tacticalPosition,
+          positionMultiplier: multiplier,
+          stamina: 100,
+          effectiveOverall: Math.round(player.overall * multiplier),
+        };
+      })
+      .filter(Boolean);
 
     const bench = players
-      .filter((player) => player.role === 'bench')
+      .filter((player) => player.role === 'bench' && !usedPlayerIds.has(player.id))
       .slice(0, 7)
       .map((player) => ({
         ...player,
+        tacticalPosition: player.position,
+        playedPosition: player.position,
+        positionMultiplier: 1,
         stamina: 100,
         effectiveOverall: player.overall,
       }));
@@ -4356,6 +4387,23 @@ export class UsersService {
       lineup,
       bench,
     };
+  }
+
+  private getSquadPageFitMultiplier(playerPosition: string, tacticalPosition: string) {
+    if (playerPosition === tacticalPosition) {
+      return 1;
+    }
+
+    const midfieldPositions = ['CM', 'CDM', 'CAM'];
+
+    if (
+      midfieldPositions.includes(playerPosition) &&
+      midfieldPositions.includes(tacticalPosition)
+    ) {
+      return 0.9;
+    }
+
+    return 0.75;
   }
 
   private async getTeamMatchStrength(saveId: string, saveTeamId: string) {

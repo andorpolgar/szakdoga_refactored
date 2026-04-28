@@ -15,11 +15,11 @@ const normalizePosition = (value) => {
 };
 
 const getTargetPosition = (player) =>
+  player.playedPosition ||
   player.tacticalPosition ||
-  player.lineupPosition ||
-  player.lineupSlotPosition ||
-  player.assignedPosition ||
   player.position;
+
+const MIDFIELD_POSITIONS = ["CM", "CDM", "CAM"];
 
 const getFitData = (player) => {
   const playerPosition = normalizePosition(player.position);
@@ -33,37 +33,11 @@ const getFitData = (player) => {
     return { multiplier: 1, className: "fit-good" };
   }
 
-  const midfieldPositions = ["CM", "CDM", "CAM"];
-  const widePositions = ["LW", "RW"];
-  const fullBackPositions = ["LB", "RB"];
-  const centerBackPositions = ["CB"];
-
   if (
-    midfieldPositions.includes(playerPosition) &&
-    midfieldPositions.includes(targetPosition)
+    MIDFIELD_POSITIONS.includes(playerPosition) &&
+    MIDFIELD_POSITIONS.includes(targetPosition)
   ) {
     return { multiplier: 0.9, className: "fit-ok" };
-  }
-
-  if (
-    widePositions.includes(playerPosition) &&
-    widePositions.includes(targetPosition)
-  ) {
-    return { multiplier: 0.9, className: "fit-ok" };
-  }
-
-  if (
-    fullBackPositions.includes(playerPosition) &&
-    fullBackPositions.includes(targetPosition)
-  ) {
-    return { multiplier: 0.9, className: "fit-ok" };
-  }
-
-  if (
-    centerBackPositions.includes(playerPosition) &&
-    centerBackPositions.includes(targetPosition)
-  ) {
-    return { multiplier: 1, className: "fit-good" };
   }
 
   return { multiplier: 0.75, className: "fit-bad" };
@@ -73,10 +47,6 @@ const getRawOverall = (player) =>
   player.overall ?? player.rating ?? player.ovr ?? player.stats?.overall ?? "-";
 
 const getPlayerOverall = (player) => {
-  if (player.effectiveOverall !== undefined && player.effectiveOverall !== null) {
-    return player.effectiveOverall;
-  }
-
   const rawOverall = Number(getRawOverall(player));
 
   if (Number.isNaN(rawOverall)) {

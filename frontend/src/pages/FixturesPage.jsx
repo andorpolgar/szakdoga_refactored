@@ -45,12 +45,6 @@ export default function FixturesPage() {
     ? playedOtherMatches
     : [...playedOtherMatches, ...remainingOtherMatches];
 
-  const isSeasonFinished =
-    fixturesScreen?.seasonState?.isSeasonFinished ||
-    fixturesScreen?.seasonState?.isFinished ||
-    fixturesScreen?.round?.isSeasonFinished ||
-    false;
-
   const canPlayRound =
     !isSeasonFinished && Number(fixturesScreen?.round?.remainingFixtures || 0) > 0;
 

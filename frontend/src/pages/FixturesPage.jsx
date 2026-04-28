@@ -118,8 +118,8 @@ export default function FixturesPage() {
             {myFixture ? (
               <>
                 <MatchCard
-                  fixture={myFixture}
-                  onClick={() => openMatchModal(myFixture)}
+                  fixture={roundSummary.myFixture}
+                  onClick={() => openMatchModal(roundSummary.myFixture)}
                   onTeamClick={openTeamModal}
                 />
 
@@ -246,8 +246,8 @@ export default function FixturesPage() {
               <div className="round-summary-section">
                 <h3>Saját meccs</h3>
                 <MatchCard
-                  fixture={myFixture}
-                  onClick={() => openMatchModal(myFixture)}
+                  fixture={roundSummary.myFixture}
+                  onClick={() => openMatchModal(roundSummary.myFixture)}
                   onTeamClick={openTeamModal}
                 />
               </div>
@@ -258,11 +258,10 @@ export default function FixturesPage() {
 
               <div className="compact-match-list">
                 {roundSummary.fixtures
-                  ?.filter(
-                    (fixture) => fixture.id !== roundSummary.myFixture?.id
-                  )
+                  ?.filter((fixture) => fixture.id !== roundSummary.myFixture?.id)
                   .map((fixture) => (
                     <MatchCard
+                      key={fixture.id}
                       fixture={fixture}
                       onClick={() => openMatchModal(fixture)}
                       onTeamClick={openTeamModal}

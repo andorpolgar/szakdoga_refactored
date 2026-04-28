@@ -62,6 +62,10 @@ export default function StandingsPage() {
   }
 
   const table = standingsScreen.table || [];
+  const isSeasonFinished =
+    standingsScreen.season?.isSeasonFinished ||
+    standingsScreen.season?.isFinished ||
+    false;
   const leader = table[0];
   const ownTeam =
     table.find((row) => row.team?.id === standingsScreen.team?.id) ||
@@ -71,9 +75,13 @@ export default function StandingsPage() {
     <div className="page-shell">
       <div className="page-container">
         <PageHero
-          kicker="League Table"
-          title="Tabella"
-          subtitle={`Szezon: ${standingsScreen.season?.currentRound}/${standingsScreen.season?.totalRounds}`}
+          kicker={isSeasonFinished ? "Final League Table" : "League Table"}
+          title={isSeasonFinished ? "Végső tabella" : "Tabella"}
+          subtitle={
+            isSeasonFinished
+              ? "A szezon véget ért"
+              : `Szezon: ${standingsScreen.season?.currentRound}/${standingsScreen.season?.totalRounds}`
+          }
         >
           <GameNav />
         </PageHero>
@@ -82,7 +90,7 @@ export default function StandingsPage() {
 
         <div className="stat-grid">
           <StatCard
-            label="Éllovas"
+            label={isSeasonFinished ? "Bajnok" : "Éllovas"}
             value={leader ? leader.team.shortName : "-"}
             helper={leader ? `${leader.points} pont` : "Nincs adat"}
           />
@@ -98,14 +106,14 @@ export default function StandingsPage() {
             value={`${standingsScreen.season?.currentRound ?? "-"}/${
               standingsScreen.season?.totalRounds ?? "-"
             }`}
-            helper="Szezon állása"
+            helper={isSeasonFinished ? "Szezon vége" : "Szezon állása"}
           />
         </div>
 
         <section className="card">
           <div className="section-heading-row">
             <div>
-              <h2>Bajnoki tabella</h2>
+              <h2>{isSeasonFinished ? "Végső bajnoki tabella" : "Bajnoki tabella"}</h2>
             </div>
           </div>
 

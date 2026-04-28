@@ -99,6 +99,12 @@ export default function DashboardPage() {
   }
 
   const currentRound = dashboard.seasonState?.currentRound ?? "-";
+  const isSeasonFinished =
+    dashboard.seasonState?.isSeasonFinished ||
+    dashboard.seasonState?.isFinished ||
+    false;
+
+  const champion = dashboard.standings?.[0] || null;
   const totalRounds = dashboard.seasonState?.totalRounds ?? "-";
   const selectedTeamStanding = dashboard.standings?.find(
     (row) => row.team.id === dashboard.selectedTeam?.id
@@ -136,7 +142,7 @@ export default function DashboardPage() {
           <StatCard
             label="Aktuális forduló"
             value={`${currentRound}/${totalRounds}`}
-            helper={dashboard.seasonState?.isFinished ? "Szezon vége" : "Szezon folyamatban"}
+            helper={isSeasonFinished ? "Szezon vége" : "Szezon folyamatban"}
           />
 
           <StatCard
@@ -164,14 +170,25 @@ export default function DashboardPage() {
           <section className="card dashboard-main-card">
             <div className="section-heading-row">
               <div>
-                <h2>Következő / aktuális saját meccs</h2>
+                <h2>{isSeasonFinished ? "Szezon végi összegzés" : "Következő / aktuális saját meccs"}</h2>
                 <p className="muted-text">
                   Innen látod, melyik mérkőzés következik a játékmenetben.
                 </p>
               </div>
             </div>
 
-            {nextFixture ? (
+            {isSeasonFinished ? (
+              <div className="season-summary-box">
+                <span className="game-page-kicker">Season Finished</span>
+                <h3>
+                  Bajnok:{" "}
+                  {champion?.team?.name || champion?.team?.shortName || "-"}
+                </h3>
+                <p className="muted-text">
+                  A szezon lezárult. A végső tabellát a Tabella oldalon tudod megnézni.
+                </p>
+              </div>
+            ) : nextFixture ? (
               <MatchCard
                 fixture={nextFixture}
                 onClick={() => openMatchModal(nextFixture)}
@@ -184,8 +201,8 @@ export default function DashboardPage() {
               />
             )}
 
-            <button onClick={() => navigate("/fixtures")}>
-              Meccsek kezelése
+            <button onClick={() => navigate(isSeasonFinished ? "/standings" : "/fixtures")}>
+              {isSeasonFinished ? "Végső tabella" : "Meccsek kezelése"}
             </button>
           </section>
 
@@ -216,7 +233,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="card">
-            <h2>Aktuális forduló</h2>
+            <h2>{isSeasonFinished ? "Utolsó forduló" : "Aktuális forduló"}</h2>
 
             {dashboard.currentRoundFixtures?.length ? (
               <div className="compact-match-list">

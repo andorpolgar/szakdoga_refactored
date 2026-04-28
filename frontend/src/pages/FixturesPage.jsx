@@ -36,7 +36,14 @@ export default function FixturesPage() {
   const remainingOtherMatches = fixturesScreen?.otherMatches?.remaining || [];
   const allOtherMatches = [...playedOtherMatches, ...remainingOtherMatches];
 
-  const canPlayRound = Number(fixturesScreen?.round?.remainingFixtures || 0) > 0;
+  const isSeasonFinished =
+    fixturesScreen?.seasonState?.isSeasonFinished ||
+    fixturesScreen?.seasonState?.isFinished ||
+    fixturesScreen?.round?.isSeasonFinished ||
+    false;
+
+  const canPlayRound =
+    !isSeasonFinished && Number(fixturesScreen?.round?.remainingFixtures || 0) > 0;
 
   const handlePlayRound = async () => {
     const result = await playRound(activeSaveId).catch(() => null);
@@ -97,7 +104,11 @@ export default function FixturesPage() {
         <PageHero
           kicker="Match Center"
           title="Meccsek"
-          subtitle={`Forduló: ${fixturesScreen.round?.roundNumber || "-"}`}
+          subtitle={
+            isSeasonFinished
+              ? "A szezon véget ért"
+              : `Forduló: ${fixturesScreen.round?.roundNumber || "-"}`
+          }
         >
           <GameNav />
         </PageHero>
@@ -115,7 +126,12 @@ export default function FixturesPage() {
               </div>
             </div>
 
-            {myFixture ? (
+            {isSeasonFinished ? (
+              <EmptyState
+                title="A szezon véget ért."
+                description="Nincs több lejátszható mérkőzés ebben a szezonban."
+              />
+            ) : myFixture ? (
   <>
               <MatchCard
                 fixture={myFixture}
@@ -248,11 +264,7 @@ export default function FixturesPage() {
 
                 <h3>
                   Bajnok:{" "}
-                  {roundSummary.seasonSummary.winner?.team?.name ||
-                  roundSummary.seasonSummary.winner?.team?.shortName ||
-                  roundSummary.seasonSummary.winner?.name ||
-                  roundSummary.seasonSummary.winner?.shortName ||
-                  "-"}
+                  {roundSummary.seasonSummary.winner?.team?.name}
                 </h3>
 
                 <div className="season-summary-standings">

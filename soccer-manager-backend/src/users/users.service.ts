@@ -797,7 +797,7 @@ export class UsersService {
 
     const seasonState = await this.getSeasonState(gameSaveId);
     const seasonSummary = seasonState.isSeasonFinished
-      ? await this.getSeasonSummary(gameSaveId)
+      ? await this.buildSeasonSummary(gameSaveId)
       : null;
 
     return {
@@ -1305,6 +1305,58 @@ export class UsersService {
         shortName: selectedTeam.shortName,
       },
       players: sortedPlayers,
+    };
+  }
+
+  private async buildSeasonSummary(gameSaveId: string) {
+    const standings = await this.prisma.saveStanding.findMany({
+      where: {
+        gameSaveId,
+      },
+      include: {
+        saveTeam: {
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+          },
+        },
+      },
+    });
+
+    const finalStandings = standings
+      .sort((a, b) => {
+        const goalDifferenceA = a.goalsFor - a.goalsAgainst;
+        const goalDifferenceB = b.goalsFor - b.goalsAgainst;
+
+        if (b.points !== a.points) return b.points - a.points;
+        if (goalDifferenceB !== goalDifferenceA) {
+          return goalDifferenceB - goalDifferenceA;
+        }
+        if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+
+        return a.saveTeam.shortName.localeCompare(b.saveTeam.shortName);
+      })
+      .map((row, index) => ({
+        position: index + 1,
+        team: {
+          id: row.saveTeam.id,
+          name: row.saveTeam.name,
+          shortName: row.saveTeam.shortName,
+        },
+        played: row.played,
+        wins: row.wins,
+        draws: row.draws,
+        losses: row.losses,
+        goalsFor: row.goalsFor,
+        goalsAgainst: row.goalsAgainst,
+        goalDifference: row.goalsFor - row.goalsAgainst,
+        points: row.points,
+      }));
+
+    return {
+      winner: finalStandings[0] ?? null,
+      finalStandings,
     };
   }
 

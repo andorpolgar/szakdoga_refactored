@@ -696,7 +696,9 @@ export class UsersService {
 
   async playRound(gameSaveId: string) {
     const gameSave = await this.prisma.gameSave.findUnique({
-      where: { id: gameSaveId },
+      where: {
+        id: gameSaveId,
+      },
     });
 
     if (!gameSave) {
@@ -708,8 +710,12 @@ export class UsersService {
     await this.runBotAiBeforeRound(gameSaveId);
 
     const lastFixture = await this.prisma.saveFixture.findFirst({
-      where: { gameSaveId },
-      orderBy: { roundNumber: 'desc' },
+      where: {
+        gameSaveId,
+      },
+      orderBy: {
+        roundNumber: 'desc',
+      },
     });
 
     if (!lastFixture) {
@@ -728,12 +734,10 @@ export class UsersService {
         roundNumber: currentRound,
         matchResult: null,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: {
+        createdAt: 'asc',
+      },
     });
-
-    if (fixtures.length === 0) {
-      throw new BadRequestException('Current round is already played');
-    }
 
     for (const fixture of fixtures) {
       const simulation = await this.simulateFixtureScore(
@@ -750,50 +754,7 @@ export class UsersService {
       );
     }
 
-    const playedFixtures = await this.prisma.saveFixture.findMany({
-      where: {
-        gameSaveId,
-        roundNumber: currentRound,
-      },
-      include: {
-        matchResult: true,
-        homeTeam: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-          },
-        },
-        awayTeam: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    });
-
     await this.tryAdvanceRoundIfRoundFinished(gameSaveId, currentRound);
-
-    const mappedFixtures = playedFixtures.map((fixture) =>
-      this.mapFixtureForResponse(fixture),
-    );
-
-    const myFixture =
-      mappedFixtures.find(
-        (fixture) =>
-          fixture.homeTeam.id === gameSave.selectedTeamId ||
-          fixture.awayTeam.id === gameSave.selectedTeamId,
-      ) ?? null;
-
-    const seasonState = await this.getSeasonState(gameSaveId);
-    const seasonSummary = seasonState.isSeasonFinished
-      ? await this.getSeasonSummary(gameSaveId)
-      : null;
 
     const playedRoundFixtures = await this.prisma.saveFixture.findMany({
       where: {
@@ -822,35 +783,29 @@ export class UsersService {
       },
     });
 
-    const selectedTeam = gameSave.selectedTeamId
-      ? await this.prisma.saveTeam.findUnique({
-          where: {
-            id: gameSave.selectedTeamId,
-          },
-          select: {
-            id: true,
-          },
-        })
-      : null;
-
-    const mappedFixtures = playedRoundFixtures.map((fixture) =>
+    const mappedRoundFixtures = playedRoundFixtures.map((fixture) =>
       this.mapFixtureForResponse(fixture),
     );
 
-    const myFixture = selectedTeam
-      ? mappedFixtures.find(
+    const summaryMyFixture = gameSave.selectedTeamId
+      ? mappedRoundFixtures.find(
           (fixture) =>
-            fixture.homeTeam.id === selectedTeam.id ||
-            fixture.awayTeam.id === selectedTeam.id,
+            fixture.homeTeam.id === gameSave.selectedTeamId ||
+            fixture.awayTeam.id === gameSave.selectedTeamId,
         ) ?? null
+      : null;
+
+    const seasonState = await this.getSeasonState(gameSaveId);
+    const seasonSummary = seasonState.isSeasonFinished
+      ? await this.getSeasonSummary(gameSaveId)
       : null;
 
     return {
       message: 'Round played successfully',
       roundNumber: currentRound,
       matchesPlayed: fixtures.length,
-      myFixture,
-      fixtures: mappedFixtures,
+      myFixture: summaryMyFixture,
+      fixtures: mappedRoundFixtures,
       seasonState,
       seasonSummary,
     };
@@ -1609,12 +1564,8 @@ export class UsersService {
       select: {
         id: true,
         name: true,
-        shortName: true,
-        formation: true,
-        tacticStyle: true,
-        budget: true,
-        gameSaveId: true,
-        saveLeagueId: true,
+        currentRound: true,
+        selectedTeamId: true,
       },
     });
 
@@ -1635,6 +1586,8 @@ export class UsersService {
         name: true,
         shortName: true,
         formation: true,
+        tacticStyle: true,
+        budget: true,
         gameSaveId: true,
         saveLeagueId: true,
       },
@@ -3941,12 +3894,15 @@ export class UsersService {
         fallbackPlayers.map((player) => player.overall),
       );
 
-      return {
-        overall: Math.round(fallbackAverage || 60),
-        defense: Math.round(fallbackAverage || 60),
-        midfield: Math.round(fallbackAverage || 60),
-        attack: Math.round(fallbackAverage || 60),
-      };
+      return this.applyTacticStyleToStrengths(
+        {
+          overall: Math.round(fallbackAverage || 60),
+          defense: Math.round(fallbackAverage || 60),
+          midfield: Math.round(fallbackAverage || 60),
+          attack: Math.round(fallbackAverage || 60),
+        },
+        'balanced',
+      );
     }
 
     const team = await this.prisma.saveTeam.findUnique({
@@ -3963,8 +3919,6 @@ export class UsersService {
       ? (team?.formation as SupportedFormation)
       : '4-3-3';
 
-    const slotDefinitions = getFormationSlots(formation);
-
     const starterWithSlots = starters.map((player) => {
       const slotDefinition = player.lineupSlot
         ? getSlotDefinition(formation, player.lineupSlot)
@@ -3980,15 +3934,12 @@ export class UsersService {
 
       const effectiveOverall = Math.round(player.overall * multiplier);
 
-      return this.applyTacticStyleToStrengths(
-        {
-          overall,
-          defense,
-          midfield,
-          attack,
-        },
-        team?.tacticStyle ?? 'balanced',
-      );
+      return {
+        ...player,
+        tacticalPosition,
+        multiplier,
+        effectiveOverall,
+      };
     });
 
     const defensePositions: PlayerPosition[] = ['GK', 'LB', 'CB', 'RB'];
@@ -4029,13 +3980,16 @@ export class UsersService {
       this.safeAverage(starterWithSlots.map((player) => player.effectiveOverall)) || 60,
     );
 
-    return {
-      overall,
-      defense,
-      midfield,
-      attack,
-    };
-  }
+    return this.applyTacticStyleToStrengths(
+      {
+        overall,
+        defense,
+        midfield,
+        attack,
+      },
+      team?.tacticStyle ?? 'balanced',
+    );
+  }  
 
   private applyTacticStyleToStrengths(
     strengths: {

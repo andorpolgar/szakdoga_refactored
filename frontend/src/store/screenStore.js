@@ -539,7 +539,9 @@ export const useScreenStore = create((set, get) => ({
     try {
       const result = await playCurrentRound(saveId);
 
-      await get().loadFixturesScreen(saveId);
+      if (!result?.seasonState?.isSeasonFinished) {
+        await get().loadFixturesScreen(saveId);
+      }
 
       set({
         isPlayingRound: false,

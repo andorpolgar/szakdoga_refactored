@@ -242,6 +242,35 @@ export default function FixturesPage() {
             <span className="game-page-kicker">Round Summary</span>
             <h2>{roundSummary.roundNumber}. forduló eredményei</h2>
 
+            {roundSummary.seasonSummary && (
+              <div className="season-summary-box">
+                <span className="game-page-kicker">Season Finished</span>
+
+                <h3>
+                  Bajnok:{" "}
+                  {roundSummary.seasonSummary.winner?.team?.name ||
+                  roundSummary.seasonSummary.winner?.team?.shortName ||
+                  roundSummary.seasonSummary.winner?.name ||
+                  roundSummary.seasonSummary.winner?.shortName ||
+                  "-"}
+                </h3>
+
+                <div className="season-summary-standings">
+                  {(
+                    roundSummary.seasonSummary.finalStandings ||
+                    roundSummary.seasonSummary.standings ||
+                    []
+                  ).map((row) => (
+                    <div key={row.team.id} className="season-summary-row">
+                      <span>
+                        {row.position}. {row.team.shortName}
+                      </span>
+                      <strong>{row.points}p</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {roundSummary.myFixture && (
               <div className="round-summary-section">
                 <h3>Saját meccs</h3>

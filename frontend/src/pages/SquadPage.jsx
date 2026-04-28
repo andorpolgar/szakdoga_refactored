@@ -27,6 +27,7 @@ export default function SquadPage() {
   const saveLineup = useScreenStore((state) => state.saveLineup);
   const autoPickLineup = useScreenStore((state) => state.autoPickLineup);
   const changeFormation = useScreenStore((state) => state.changeFormation);
+  const changeTacticStyle = useScreenStore((state) => state.changeTacticStyle);
 
   const isUpdating = useScreenStore((state) => state.isUpdatingSquadPlayer);
 
@@ -302,16 +303,20 @@ export default function SquadPage() {
               onAutoPick={handleAutoPick}
             />
 
-            <select
-              value={squadScreen?.team?.tacticStyle || "balanced"}
-              onChange={(event) =>
-                changeTacticStyle(activeSaveId, event.target.value)
-              }
-            >
-              <option value="balanced">Balanced</option>
-              <option value="attacking">Attacking</option>
-              <option value="defensive">Defensive</option>
-            </select>
+            <div className="squad-control-block">
+              <label>Taktika</label>
+              <select
+                value={squadScreen?.team?.tacticStyle || "balanced"}
+                disabled={isLineupRefreshing || isUpdating}
+                onChange={(event) =>
+                  changeTacticStyle(activeSaveId, event.target.value)
+                }
+              >
+                <option value="balanced">Balanced</option>
+                <option value="attacking">Attacking</option>
+                <option value="defensive">Defensive</option>
+              </select>
+            </div>
           </div>
 
           <LineupPitch

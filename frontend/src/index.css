@@ -1797,3 +1797,56 @@ select {
   font-size: 13px;
   vertical-align: middle;
 }
+
+.squad-control-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.squad-control-block label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.squad-control-block select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-weight: 700;
+}
+
+.season-summary-box {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+}
+
+.season-summary-box h3 {
+  margin: 8px 0 12px;
+  font-size: 20px;
+  color: #92400e;
+}
+
+.season-summary-standings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.season-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.65);
+  font-weight: 700;
+}

@@ -3188,15 +3188,94 @@ export class UsersService {
     return value;
   }
 
-  private async simulateFixtureScore(saveId: string, homeTeamId: string, awayTeamId: string) {
-    const simulation = await this.simulateMatchScore(saveId, homeTeamId, awayTeamId);
+  private async simulateFixtureScore(
+    saveId: string,
+    homeTeamId: string,
+    awayTeamId: string,
+  ) {
+    const homeStrength = await this.getTeamMatchStrength(saveId, homeTeamId);
+    const awayStrength = await this.getTeamMatchStrength(saveId, awayTeamId);
+
+    const homeAdvantage = 3;
+
+    const homeAttackPower =
+      homeStrength.attack + homeStrength.midfield * 0.35 + homeAdvantage;
+
+    const awayAttackPower =
+      awayStrength.attack + awayStrength.midfield * 0.35;
+
+    const homeDefensivePower =
+      homeStrength.defense + homeStrength.midfield * 0.25;
+
+    const awayDefensivePower =
+      awayStrength.defense + awayStrength.midfield * 0.25;
+
+    const homeExpectedGoals = this.calculateExpectedGoals(
+      homeAttackPower,
+      awayDefensivePower,
+      true,
+    );
+
+    const awayExpectedGoals = this.calculateExpectedGoals(
+      awayAttackPower,
+      homeDefensivePower,
+      false,
+    );
+
+    let homeGoals = this.rollGoalsFromExpected(homeExpectedGoals);
+    let awayGoals = this.rollGoalsFromExpected(awayExpectedGoals);
+
+    if (homeGoals > 6) homeGoals = 6;
+    if (awayGoals > 6) awayGoals = 6;
 
     return {
-      homeGoals: simulation.homeGoals,
-      awayGoals: simulation.awayGoals,
-      homeStrength: simulation.homeStrength.overall,
-      awayStrength: simulation.awayStrength.overall,
+      homeGoals,
+      awayGoals,
+      debug: {
+        homeStrength,
+        awayStrength,
+        homeExpectedGoals,
+        awayExpectedGoals,
+      },
     };
+  }
+
+  private calculateExpectedGoals(
+    attackPower: number,
+    defensePower: number,
+    isHome: boolean,
+  ) {
+    const strengthDiff = attackPower - defensePower;
+
+    let expectedGoals = 1.15 + strengthDiff / 28;
+
+    if (isHome) {
+      expectedGoals += 0.2;
+    }
+
+    expectedGoals += this.randomBetween(-0.35, 0.35);
+
+    return this.clampNumber(expectedGoals, 0.2, 3.4);
+  }
+
+  private rollGoalsFromExpected(expectedGoals: number) {
+    let goals = 0;
+
+    const firstGoalChance = this.clampNumber(expectedGoals / 3.2, 0.05, 0.95);
+    const secondGoalChance = this.clampNumber((expectedGoals - 0.7) / 3.0, 0, 0.8);
+    const thirdGoalChance = this.clampNumber((expectedGoals - 1.4) / 3.0, 0, 0.55);
+    const fourthGoalChance = this.clampNumber((expectedGoals - 2.1) / 3.2, 0, 0.3);
+    const fifthGoalChance = this.clampNumber((expectedGoals - 2.8) / 3.5, 0, 0.15);
+    const sixthGoalChance = this.clampNumber((expectedGoals - 3.3) / 4.0, 0, 0.08);
+
+    if (Math.random() < firstGoalChance) goals += 1;
+    if (Math.random() < secondGoalChance) goals += 1;
+    if (Math.random() < thirdGoalChance) goals += 1;
+    if (Math.random() < fourthGoalChance) goals += 1;
+    if (Math.random() < fifthGoalChance) goals += 1;
+    if (Math.random() < sixthGoalChance) goals += 1;
+
+    return goals;
   }
 
   async getCurrentRoundActionSummary(saveId: string) {
@@ -3849,7 +3928,7 @@ export class UsersService {
   }
 
   private clampNumber(value: number, min: number, max: number) {
-    return Math.max(min, Math.min(max, value));
+    return Math.min(Math.max(value, min), max);
   }
 
   private getPoissonRandom(lambda: number) {

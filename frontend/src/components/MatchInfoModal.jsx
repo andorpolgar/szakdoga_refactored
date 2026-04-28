@@ -6,18 +6,41 @@ import MatchCard from "./MatchCard";
 
 const midfieldPositions = ["CM", "CDM", "CAM"];
 
-const getFitData = (player) => {
-  const targetPosition = player.lineupSlot || player.lineupPosition || player.position;
+const normalizePosition = (value) => {
+  if (!value) return "";
 
-  if (player.position === targetPosition) {
+  return String(value)
+    .toUpperCase()
+    .replace(/[0-9]/g, "")
+    .replace("_", "")
+    .trim();
+};
+
+const getFitData = (player) => {
+  const playerPosition = normalizePosition(player.position);
+  const targetPosition = normalizePosition(
+    player.lineupPosition || player.tacticalPosition || player.position
+  );
+
+  if (playerPosition === targetPosition) {
     return { multiplier: 1, className: "fit-good" };
   }
 
+  const midfieldPositions = ["CM", "CDM", "CAM"];
+  const centerBackPositions = ["CB"];
+
   if (
-    midfieldPositions.includes(player.position) &&
+    midfieldPositions.includes(playerPosition) &&
     midfieldPositions.includes(targetPosition)
   ) {
     return { multiplier: 0.9, className: "fit-ok" };
+  }
+
+  if (
+    centerBackPositions.includes(playerPosition) &&
+    centerBackPositions.includes(targetPosition)
+  ) {
+    return { multiplier: 1, className: "fit-good" };
   }
 
   return { multiplier: 0.75, className: "fit-bad" };
@@ -61,7 +84,7 @@ function PlayerInfoRow({ player }) {
   );
 }
 
-function TeamSquadPreview({ saveId, team }) {
+function TeamSquadPreview({ saveId, team, onTeamClick }) {
   const [players, setPlayers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -91,10 +114,23 @@ function TeamSquadPreview({ saveId, team }) {
         )
       : [...players].sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0)).slice(0, 11);
 
+  const teamOverall = starters.length
+    ? Math.round(
+        starters
+          .slice(0, 11)
+          .reduce((sum, player) => sum + getPlayerOverall(player), 0) /
+          starters.slice(0, 11).length
+      )
+    : "-";
+
   return (
     <section className="match-team-squad-preview">
-      <h3>
+      <h3
+        className="clickable-team"
+        onClick={() => onTeamClick?.(team?.id)}
+      >
         {team?.name} <span>({team?.shortName})</span>
+        <strong className="match-team-overall">OVR {teamOverall}</strong>
       </h3>
 
       {isLoading ? (
@@ -112,7 +148,7 @@ function TeamSquadPreview({ saveId, team }) {
   );
 }
 
-export default function MatchInfoModal({ fixture, saveId, onClose }) {
+export default function MatchInfoModal({ fixture, saveId, onClose, onTeamClick }) {
   if (!fixture) return null;
 
   return (
@@ -133,8 +169,17 @@ export default function MatchInfoModal({ fixture, saveId, onClose }) {
         <MatchCard fixture={fixture} />
 
         <div className="match-squad-preview-grid">
-          <TeamSquadPreview saveId={saveId} team={fixture.homeTeam} />
-          <TeamSquadPreview saveId={saveId} team={fixture.awayTeam} />
+          <TeamSquadPreview
+            saveId={saveId}
+            team={fixture.homeTeam}
+            onTeamClick={onTeamClick}
+          />
+
+          <TeamSquadPreview
+            saveId={saveId}
+            team={fixture.awayTeam}
+            onTeamClick={onTeamClick}
+          />
         </div>
       </div>
     </div>

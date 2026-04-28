@@ -5,28 +5,8 @@ import EmptyState from "./EmptyState";
 import MatchCard from "./MatchCard";
 import MatchInfoModal from "./MatchInfoModal";
 
-const midfieldPositions = ["CM", "CDM", "CAM"];
-
-const getFitData = (player) => {
-  const targetPosition = player.lineupSlot || player.lineupPosition || player.position;
-
-  if (player.position === targetPosition) {
-    return { multiplier: 1, className: "fit-good" };
-  }
-
-  if (
-    midfieldPositions.includes(player.position) &&
-    midfieldPositions.includes(targetPosition)
-  ) {
-    return { multiplier: 0.9, className: "fit-ok" };
-  }
-
-  return { multiplier: 0.75, className: "fit-bad" };
-};
-
 const getPlayerOverall = (player) =>
-  player.effectiveOverall ??
-  Math.round((player.overall ?? 0) * getFitData(player).multiplier);
+  player.overall ?? player.rating ?? player.ovr ?? player.stats?.overall ?? "-";
 
 function PlayerStatsTooltip({ player }) {
   return (
@@ -49,13 +29,11 @@ function PlayerStatsTooltip({ player }) {
 }
 
 function PlayerInfoRow({ player }) {
-  const fit = getFitData(player);
-
   return (
     <div className="team-lineup-row player-info-hover-row">
       <strong>{player.name}</strong>
       <span>{player.position}</span>
-      <span className={`team-lineup-ovr ${fit.className}`}>
+      <span className="team-lineup-ovr raw-ovr">
         {getPlayerOverall(player)}
       </span>
 
@@ -188,6 +166,7 @@ export default function TeamInfoModal({ saveId, teamId, onClose }) {
             fixture={selectedFixture}
             saveId={saveId}
             onClose={() => setSelectedFixture(null)}
+            onTeamClick={() => {}}
           />
         )}
       </div>

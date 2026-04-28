@@ -1768,3 +1768,21 @@ select {
   left: 50%;
   bottom: calc(100% + 10px);
 }
+
+.raw-ovr {
+  background: #111827;
+  color: white;
+}
+
+.match-team-overall {
+  margin-left: 10px;
+  font-size: 13px;
+  color: #111827;
+}
+
+.match-team-squad-preview h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}

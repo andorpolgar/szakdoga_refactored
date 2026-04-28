@@ -285,6 +285,7 @@ export default function FixturesPage() {
       {selectedFixture && (
         <MatchInfoModal
           fixture={selectedFixture}
+          saveId={activeSaveId}
           onClose={() => setSelectedFixture(null)}
           onTeamClick={openTeamModal}
         />

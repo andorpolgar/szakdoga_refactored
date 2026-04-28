@@ -267,6 +267,7 @@ export default function DashboardPage() {
           fixture={selectedFixture}
           saveId={activeSaveId}
           onClose={() => setSelectedFixture(null)}
+          onTeamClick={openTeamModal}
         />
       )}
     </div>

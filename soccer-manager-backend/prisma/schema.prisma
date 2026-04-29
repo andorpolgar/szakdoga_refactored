@@ -225,6 +225,8 @@ model MatchResult {
   awayBench  Json?
   events     Json?
 
+  matchSummary Json?
+
   gameSaveId String
   gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
 

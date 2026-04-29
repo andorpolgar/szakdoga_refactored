@@ -589,6 +589,114 @@ export class UsersService {
     });
   }
 
+  private async buildTeamLineupSnapshot(gameSaveId: string, saveTeamId: string) {
+    const team = await this.prisma.saveTeam.findFirst({
+      where: {
+        id: saveTeamId,
+        gameSaveId,
+      },
+      select: {
+        id: true,
+        name: true,
+        shortName: true,
+        formation: true,
+      },
+    });
+
+    if (!team) {
+      throw new BadRequestException('Team not found for match summary');
+    }
+
+    const formation = isSupportedFormation(team.formation)
+      ? (team.formation as SupportedFormation)
+      : '4-3-3';
+
+    const players = await this.prisma.savePlayer.findMany({
+      where: {
+        gameSaveId,
+        saveTeamId,
+      },
+      select: {
+        id: true,
+        name: true,
+        age: true,
+        position: true,
+        overall: true,
+        pace: true,
+        shooting: true,
+        passing: true,
+        dribbling: true,
+        defending: true,
+        physical: true,
+        role: true,
+        lineupPosition: true,
+        lineupSlot: true,
+        isTransferListed: true,
+        marketValue: true,
+        saveTeamId: true,
+        gameSaveId: true,
+      },
+      orderBy: [
+        { overall: 'desc' },
+        { name: 'asc' },
+      ],
+    });
+
+    const slots = getFormationSlots(formation);
+    const starters = players.filter((player) => player.role === 'starter');
+    const bench = players.filter((player) => player.role === 'bench');
+
+    const lineup = slots
+      .map((slot) => {
+        const player = starters.find((starter) => starter.lineupSlot === slot.slotId);
+
+        if (!player) {
+          return null;
+        }
+
+        const mappedPlayer = this.mapLineupPlayer(player, slot.tacticalPosition);
+
+        return {
+          ...mappedPlayer,
+          playedPosition: slot.tacticalPosition,
+          tacticalPosition: slot.tacticalPosition,
+          lineupSlot: slot.slotId,
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      team,
+      formation,
+      lineup,
+      bench: bench.map((player) =>
+        this.mapLineupPlayer(player, player.position as PlayerPosition),
+      ),
+    };
+  }
+
+  private async buildMatchSummarySnapshot(
+    gameSaveId: string,
+    homeTeamId: string,
+    awayTeamId: string,
+  ) {
+    const [homeSnapshot, awaySnapshot] = await Promise.all([
+      this.buildTeamLineupSnapshot(gameSaveId, homeTeamId),
+      this.buildTeamLineupSnapshot(gameSaveId, awayTeamId),
+    ]);
+
+    return {
+      homeFormation: homeSnapshot.formation,
+      awayFormation: awaySnapshot.formation,
+      homeLineup: homeSnapshot.lineup,
+      awayLineup: awaySnapshot.lineup,
+      homeBench: homeSnapshot.bench,
+      awayBench: awaySnapshot.bench,
+      goalscorers: [],
+      substitutions: [],
+    };
+  }
+
   async saveMatchResult(
     gameSaveId: string,
     saveFixtureId: string,
@@ -621,6 +729,12 @@ export class UsersService {
       throw new BadRequestException('Match result already exists for this fixture');
     }
 
+    const matchSummary = await this.buildMatchSummarySnapshot(
+      gameSaveId,
+      fixture.homeTeamId,
+      fixture.awayTeamId,
+    );
+
     const result = await this.prisma.matchResult.create({
       data: {
         gameSaveId,
@@ -634,6 +748,7 @@ export class UsersService {
         homeBench: snapshot?.homeBench ?? [],
         awayBench: snapshot?.awayBench ?? [],
         events: snapshot?.events ?? [],
+        matchSummary,
       },
     });
 
@@ -5995,8 +6110,101 @@ export class UsersService {
     };
   }
 
+  private async autoPickTeamLineup(saveId: string, saveTeamId: string) {
+    const team = await this.prisma.saveTeam.findFirst({
+      where: {
+        id: saveTeamId,
+        gameSaveId: saveId,
+      },
+      select: {
+        id: true,
+        formation: true,
+      },
+    });
+
+    if (!team) {
+      throw new BadRequestException('Team not found');
+    }
+
+    const formation = isSupportedFormation(team.formation)
+      ? (team.formation as SupportedFormation)
+      : '4-3-3';
+
+    const players = await this.prisma.savePlayer.findMany({
+      where: {
+        gameSaveId: saveId,
+        saveTeamId,
+      },
+      select: {
+        id: true,
+        name: true,
+        age: true,
+        position: true,
+        overall: true,
+        pace: true,
+        shooting: true,
+        passing: true,
+        dribbling: true,
+        defending: true,
+        physical: true,
+        role: true,
+        lineupPosition: true,
+        lineupSlot: true,
+        isTransferListed: true,
+        marketValue: true,
+        saveTeamId: true,
+        gameSaveId: true,
+      },
+      orderBy: [
+        { overall: 'desc' },
+        { name: 'asc' },
+      ],
+    });
+
+    if (players.length < 11) {
+      return;
+    }
+
+    const assignments = this.buildBestLineupAssignments(players, formation);
+    const starterIds = new Set(assignments.map((item) => item.playerId));
+
+    const benchPlayerIds = players
+      .filter((player) => !starterIds.has(player.id))
+      .sort((a, b) => b.overall - a.overall)
+      .slice(0, 7)
+      .map((player) => player.id);
+
+    await this.applySelectedTeamLineupState(
+      saveId,
+      saveTeamId,
+      formation,
+      assignments.map((item) => ({
+        playerId: item.playerId,
+        lineupSlot: item.lineupSlot,
+      })),
+      benchPlayerIds,
+    );
+  }
+
   private mapFixtureForResponse(fixture: any) {
     const isPlayed = Boolean(fixture.matchResult);
+
+    const mapSummaryPlayers = (players: any[] = []) =>
+      players.map((p) => ({
+        ...p,
+        playedPosition:
+          p.playedPosition ||
+          p.tacticalPosition ||
+          p.lineupPosition ||
+          p.lineupSlot ||
+          p.position,
+        tacticalPosition:
+          p.tacticalPosition ||
+          p.playedPosition ||
+          p.lineupPosition ||
+          p.lineupSlot ||
+          p.position,
+      }));
 
     return {
       id: fixture.id,
@@ -6015,14 +6223,19 @@ export class UsersService {
         ? {
             homeFormation: fixture.matchResult.homeFormation,
             awayFormation: fixture.matchResult.awayFormation,
-            homeLineup: fixture.matchResult.homeLineup ?? [],
-            awayLineup: fixture.matchResult.awayLineup ?? [],
+
+            homeLineup: mapSummaryPlayers(fixture.matchResult.homeLineup),
+            awayLineup: mapSummaryPlayers(fixture.matchResult.awayLineup),
+
             homeBench: fixture.matchResult.homeBench ?? [],
             awayBench: fixture.matchResult.awayBench ?? [],
+
             events: fixture.matchResult.events ?? [],
+
             goalscorers: (fixture.matchResult.events ?? []).filter(
               (event: any) => event.type === 'GOAL',
             ),
+
             substitutions: (fixture.matchResult.events ?? []).filter(
               (event: any) => event.type === 'SUBSTITUTION',
             ),

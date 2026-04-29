@@ -257,7 +257,7 @@ export class SavesService {
             physical: player.physical,
             role: player.role,
             lineupPosition: player.lineupPosition,
-            lineupSlot: null,
+            lineupSlot: this.getDefaultLineupSlot(player.lineupPosition, player.name),
             marketValue: player.marketValue,
             isTransferListed: false,
             gameSaveId: gameSave.id,
@@ -544,6 +544,29 @@ export class SavesService {
     }
 
     return lastFixture.roundNumber;
+  }
+
+  private getDefaultLineupSlot(lineupPosition: string | null, playerName: string) {
+    if (!lineupPosition) return null;
+
+    if (lineupPosition === 'GK') return 'GK';
+    if (lineupPosition === 'LB') return 'LB';
+    if (lineupPosition === 'RB') return 'RB';
+    if (lineupPosition === 'CDM') return 'CDM';
+    if (lineupPosition === 'CAM') return 'CAM';
+    if (lineupPosition === 'LW') return 'LW';
+    if (lineupPosition === 'RW') return 'RW';
+    if (lineupPosition === 'ST') return 'ST';
+
+    if (lineupPosition === 'CB') {
+      return playerName.length % 2 === 0 ? 'CB1' : 'CB2';
+    }
+
+    if (lineupPosition === 'CM') {
+      return playerName.length % 2 === 0 ? 'CM1' : 'CM2';
+    }
+
+    return null;
   }
 
   private sanitizeUser(user: {

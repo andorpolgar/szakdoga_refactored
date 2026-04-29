@@ -131,6 +131,18 @@ export class UsersController {
       body.awayGoals,
     );
   }
+  
+  @Post('saves/:saveId/simulate-current-round')
+  async simulateRemainingFixturesInCurrentRound(
+    @Param('saveId') saveId: string,
+  ) {
+    return this.usersService.simulateRemainingFixturesInCurrentRound(saveId);
+  }
+  
+  @Post('saves/:saveId/complete-current-round')
+  async completeCurrentRound(@Param('saveId') saveId: string) {
+    return this.usersService.completeCurrentRound(saveId);
+  }
 
   @Get('saves/:saveId/rounds')
   async getRoundsOverview(@Param('saveId') saveId: string) {
@@ -217,6 +229,17 @@ export class UsersController {
     );
   }
   
+  @Patch('saves/:saveId/selected-team/tactic-style')
+  async updateSelectedTeamTacticStyle(
+    @Param('saveId') saveId: string,
+    @Body() body: { tacticStyle: string },
+  ) {
+    return this.usersService.updateSelectedTeamTacticStyle(
+      saveId,
+      body.tacticStyle,
+    );
+  }
+
   @Patch('saves/:saveId/players/:playerId/transfer-list-status')
   async updatePlayerTransferListStatus(
     @Param('saveId') saveId: string,

@@ -729,6 +729,9 @@ export class UsersService {
       throw new BadRequestException('Match result already exists for this fixture');
     }
 
+    await this.ensureTeamLineupPersisted(gameSaveId, fixture.homeTeamId);
+    await this.ensureTeamLineupPersisted(gameSaveId, fixture.awayTeamId);
+
     const matchSummary = await this.buildMatchSummarySnapshot(
       gameSaveId,
       fixture.homeTeamId,
@@ -4004,6 +4007,98 @@ export class UsersService {
     };
   }
 
+  private async ensureTeamLineupPersisted(gameSaveId: string, saveTeamId: string) {
+    const team = await this.prisma.saveTeam.findFirst({
+      where: {
+        id: saveTeamId,
+        gameSaveId,
+      },
+      select: {
+        id: true,
+        formation: true,
+      },
+    });
+
+    if (!team) {
+      throw new BadRequestException('Team not found');
+    }
+
+    const formation = isSupportedFormation(team.formation)
+      ? (team.formation as SupportedFormation)
+      : '4-3-3';
+
+    const players = await this.prisma.savePlayer.findMany({
+      where: {
+        gameSaveId,
+        saveTeamId,
+      },
+      orderBy: [
+        { overall: 'desc' },
+        { name: 'asc' },
+      ],
+    });
+
+    const starters = players.filter((player) => player.role === 'starter');
+
+    const hasPersistedSlots =
+      starters.length === 11 &&
+      starters.every((player) => player.lineupSlot && player.lineupPosition);
+
+    if (hasPersistedSlots) {
+      return;
+    }
+
+    const assignments = this.buildBestLineupAssignments(players, formation);
+    const starterIds = new Set(assignments.map((assignment) => assignment.playerId));
+
+    await this.prisma.savePlayer.updateMany({
+      where: {
+        gameSaveId,
+        saveTeamId,
+      },
+      data: {
+        role: 'reserve',
+        lineupPosition: null,
+        lineupSlot: null,
+      },
+    });
+
+    for (const assignment of assignments) {
+      const slotDefinition = getSlotDefinition(formation, assignment.lineupSlot);
+
+      if (!slotDefinition) continue;
+
+      await this.prisma.savePlayer.update({
+        where: {
+          id: assignment.playerId,
+        },
+        data: {
+          role: 'starter',
+          lineupSlot: assignment.lineupSlot,
+          lineupPosition: slotDefinition.tacticalPosition,
+        },
+      });
+    }
+
+    const benchPlayers = players
+      .filter((player) => !starterIds.has(player.id))
+      .sort((a, b) => b.overall - a.overall)
+      .slice(0, 7);
+
+    for (const player of benchPlayers) {
+      await this.prisma.savePlayer.update({
+        where: {
+          id: player.id,
+        },
+        data: {
+          role: 'bench',
+          lineupPosition: null,
+          lineupSlot: null,
+        },
+      });
+    }
+  }
+
   async getSelectedTeamTransferListedPlayers(saveId: string) {
     const { selectedTeam } = await this.getRequiredSelectedTeam(saveId);
 
@@ -6109,83 +6204,7 @@ export class UsersService {
       })),
     };
   }
-
-  private async autoPickTeamLineup(saveId: string, saveTeamId: string) {
-    const team = await this.prisma.saveTeam.findFirst({
-      where: {
-        id: saveTeamId,
-        gameSaveId: saveId,
-      },
-      select: {
-        id: true,
-        formation: true,
-      },
-    });
-
-    if (!team) {
-      throw new BadRequestException('Team not found');
-    }
-
-    const formation = isSupportedFormation(team.formation)
-      ? (team.formation as SupportedFormation)
-      : '4-3-3';
-
-    const players = await this.prisma.savePlayer.findMany({
-      where: {
-        gameSaveId: saveId,
-        saveTeamId,
-      },
-      select: {
-        id: true,
-        name: true,
-        age: true,
-        position: true,
-        overall: true,
-        pace: true,
-        shooting: true,
-        passing: true,
-        dribbling: true,
-        defending: true,
-        physical: true,
-        role: true,
-        lineupPosition: true,
-        lineupSlot: true,
-        isTransferListed: true,
-        marketValue: true,
-        saveTeamId: true,
-        gameSaveId: true,
-      },
-      orderBy: [
-        { overall: 'desc' },
-        { name: 'asc' },
-      ],
-    });
-
-    if (players.length < 11) {
-      return;
-    }
-
-    const assignments = this.buildBestLineupAssignments(players, formation);
-    const starterIds = new Set(assignments.map((item) => item.playerId));
-
-    const benchPlayerIds = players
-      .filter((player) => !starterIds.has(player.id))
-      .sort((a, b) => b.overall - a.overall)
-      .slice(0, 7)
-      .map((player) => player.id);
-
-    await this.applySelectedTeamLineupState(
-      saveId,
-      saveTeamId,
-      formation,
-      assignments.map((item) => ({
-        playerId: item.playerId,
-        lineupSlot: item.lineupSlot,
-      })),
-      benchPlayerIds,
-    );
-  }
-
+  
   private mapFixtureForResponse(fixture: any) {
     const isPlayed = Boolean(fixture.matchResult);
 

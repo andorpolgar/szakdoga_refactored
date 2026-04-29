@@ -243,6 +243,8 @@ export class SavesService {
       }
 
       if (baseTeam.players.length > 0) {
+        const lineupSlotCounters: Record<string, number> = {};
+
         await this.prisma.savePlayer.createMany({
           data: baseTeam.players.map((player) => ({
             name: player.name,
@@ -257,7 +259,7 @@ export class SavesService {
             physical: player.physical,
             role: player.role,
             lineupPosition: player.lineupPosition,
-            lineupSlot: this.getDefaultLineupSlot(player.lineupPosition, player.name),
+            lineupSlot: this.getInitialLineupSlot(player.lineupPosition, lineupSlotCounters),
             marketValue: player.marketValue,
             isTransferListed: false,
             gameSaveId: gameSave.id,
@@ -546,24 +548,35 @@ export class SavesService {
     return lastFixture.roundNumber;
   }
 
-  private getDefaultLineupSlot(lineupPosition: string | null, playerName: string) {
+  private getInitialLineupSlot(
+    lineupPosition: string | null,
+    counters: Record<string, number>,
+  ) {
     if (!lineupPosition) return null;
 
-    if (lineupPosition === 'GK') return 'GK';
-    if (lineupPosition === 'LB') return 'LB';
-    if (lineupPosition === 'RB') return 'RB';
-    if (lineupPosition === 'CDM') return 'CDM';
-    if (lineupPosition === 'CAM') return 'CAM';
-    if (lineupPosition === 'LW') return 'LW';
-    if (lineupPosition === 'RW') return 'RW';
-    if (lineupPosition === 'ST') return 'ST';
+    counters[lineupPosition] = (counters[lineupPosition] ?? 0) + 1;
+    const index = counters[lineupPosition];
+
+    if (lineupPosition === 'GK') return index === 1 ? 'GK' : null;
+    if (lineupPosition === 'LB') return index === 1 ? 'LB' : null;
+    if (lineupPosition === 'RB') return index === 1 ? 'RB' : null;
+    if (lineupPosition === 'CDM') return index === 1 ? 'CDM' : null;
+    if (lineupPosition === 'CAM') return index === 1 ? 'CAM' : null;
+    if (lineupPosition === 'LW') return index === 1 ? 'LW' : null;
+    if (lineupPosition === 'RW') return index === 1 ? 'RW' : null;
+    if (lineupPosition === 'ST') return index === 1 ? 'ST' : null;
 
     if (lineupPosition === 'CB') {
-      return playerName.length % 2 === 0 ? 'CB1' : 'CB2';
+      if (index === 1) return 'CB1';
+      if (index === 2) return 'CB2';
+      if (index === 3) return 'CB3';
+      return null;
     }
 
     if (lineupPosition === 'CM') {
-      return playerName.length % 2 === 0 ? 'CM1' : 'CM2';
+      if (index === 1) return 'CM1';
+      if (index === 2) return 'CM2';
+      return null;
     }
 
     return null;

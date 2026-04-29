@@ -4476,6 +4476,11 @@ export class UsersService {
         id: fixture.id,
       },
       include: {
+        events: {
+          orderBy: {
+            minute: 'asc',
+          },
+        },
         matchResult: true,
         homeTeam: {
           select: {

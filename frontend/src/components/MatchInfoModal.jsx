@@ -35,6 +35,25 @@ const mapLineupSlotsToPlayers = (slots = []) =>
     )
     .filter(Boolean);
 
+const mapSummaryLineupToPlayers = (lineup = []) =>
+  lineup.map((player) => ({
+    ...player,
+    playedPosition:
+      player.playedPosition ||
+      player.tacticalPosition ||
+      player.lineupPosition ||
+      player.matchPosition ||
+      player.assignedPosition ||
+      player.position,
+    tacticalPosition:
+      player.tacticalPosition ||
+      player.playedPosition ||
+      player.lineupPosition ||
+      player.matchPosition ||
+      player.assignedPosition ||
+      player.position,
+  }));
+
 const getPlayerSubstitutionStatus = (player, substitutions = []) => {
   const subOut = substitutions.find(
     (event) => event.playerOut?.id === player.id
@@ -332,7 +351,7 @@ export default function MatchInfoModal({ fixture, saveId, onClose, onTeamClick }
               <TeamSnapshotPreview
                 team={fixture.homeTeam}
                 formation={matchSummary.homeFormation}
-                lineup={matchSummary.homeLineup || []}
+                lineup={mapSummaryLineupToPlayers(matchSummary.homeLineup || [])}
                 bench={matchSummary.homeBench || []}
                 substitutions={homeSubstitutions}
                 onTeamClick={onTeamClick}
@@ -341,7 +360,7 @@ export default function MatchInfoModal({ fixture, saveId, onClose, onTeamClick }
               <TeamSnapshotPreview
                 team={fixture.awayTeam}
                 formation={matchSummary.awayFormation}
-                lineup={matchSummary.awayLineup || []}
+                lineup={mapSummaryLineupToPlayers(matchSummary.awayLineup || [])}
                 bench={matchSummary.awayBench || []}
                 substitutions={awaySubstitutions}
                 onTeamClick={onTeamClick}

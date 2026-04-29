@@ -828,6 +828,35 @@ export class UsersService {
     return result;
   }
 
+  private async validateTeamHasCompleteLineup(
+    gameSaveId: string,
+    saveTeamId: string,
+  ) {
+    const starters = await this.prisma.savePlayer.findMany({
+      where: {
+        gameSaveId,
+        saveTeamId,
+        role: 'starter',
+      },
+      select: {
+        id: true,
+        name: true,
+        lineupSlot: true,
+        lineupPosition: true,
+      },
+    });
+
+    const validStarters = starters.filter(
+      (player) => player.lineupSlot && player.lineupPosition,
+    );
+
+    if (validStarters.length !== 11) {
+      throw new BadRequestException(
+        `Incomplete lineup: expected 11 starters with lineup slots, got ${validStarters.length}`,
+      );
+    }
+  }
+
   async playRound(gameSaveId: string) {
     const gameSave = await this.prisma.gameSave.findUnique({
       where: {
@@ -924,6 +953,9 @@ export class UsersService {
         ...homeGoalEvents,
         ...awayGoalEvents,
       ].sort((a, b) => a.minute - b.minute);
+
+      await this.validateTeamHasCompleteLineup(gameSaveId, fixture.homeTeamId);
+      await this.validateTeamHasCompleteLineup(gameSaveId, fixture.awayTeamId);
 
       await this.saveMatchResult(
         gameSaveId,
@@ -1770,6 +1802,43 @@ export class UsersService {
       })),
       benchPlayerIds,
     );
+
+    const debugPlayers = await this.prisma.savePlayer.findMany({
+      where: {
+        gameSaveId: saveId,
+        saveTeamId,
+      },
+      select: {
+        name: true,
+        role: true,
+        position: true,
+        lineupPosition: true,
+        lineupSlot: true,
+      },
+      orderBy: [{ role: 'asc' }, { name: 'asc' }],
+    });
+
+    console.table(debugPlayers);
+
+    const starterCount = await this.prisma.savePlayer.count({
+      where: {
+        gameSaveId: saveId,
+        saveTeamId,
+        role: 'starter',
+        lineupSlot: {
+          not: null,
+        },
+        lineupPosition: {
+          not: null,
+        },
+      },
+    });
+
+    if (starterCount !== 11) {
+      throw new BadRequestException(
+        `Auto pick failed: expected 11 starters, got ${starterCount}`,
+      );
+    }
   }
 
   private async botListRandomPlayer(saveId: string, saveTeamId: string) {

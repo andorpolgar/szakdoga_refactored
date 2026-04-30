@@ -1,0 +1,599 @@
+import { useEffect, useState } from "react";
+import { getSquadScreen, getTeamPlayers } from "../api/screenApi";
+import InlineLoader from "./InlineLoader";
+import EmptyState from "./EmptyState";
+import MatchCard from "./MatchCard";
+import {
+  getDisplayedPosition,
+  getFitData,
+  getFitOverall,
+  getRawOverall,
+  getTeamFitOverall,
+} from "../utils/positionFit";
+
+const formatMoney = (value) =>
+  `€${Number(value || 0).toLocaleString("hu-HU")}`;
+
+const formatNumber = (value) =>
+  Number(value || 0).toLocaleString("hu-HU");
+
+const formatSignedDecimal = (value) => {
+  const number = Number(value || 0);
+
+  if (number > 0) {
+    return `+${number.toFixed(2)}`;
+  }
+
+  return number.toFixed(2);
+};
+
+const uniquePlayers = (players) => {
+  const map = new Map();
+
+  players.filter(Boolean).forEach((player) => {
+    map.set(player.id, player);
+  });
+
+  return Array.from(map.values());
+};
+
+const mapLineupSlotsToPlayers = (slots = []) =>
+  slots
+    .map((slot) =>
+      slot.player
+        ? {
+            ...slot.player,
+            playedPosition: slot.tacticalPosition,
+            tacticalPosition: slot.tacticalPosition,
+            lineupSlot: slot.slotId,
+          }
+        : null
+    )
+    .filter(Boolean);
+
+const mapSummaryLineupToPlayers = (lineup = []) =>
+  lineup.map((player) => ({
+    ...player,
+    playedPosition:
+      player.playedPosition ||
+      player.tacticalPosition ||
+      player.lineupPosition ||
+      player.matchPosition ||
+      player.assignedPosition ||
+      player.position,
+    tacticalPosition:
+      player.tacticalPosition ||
+      player.playedPosition ||
+      player.lineupPosition ||
+      player.matchPosition ||
+      player.assignedPosition ||
+      player.position,
+  }));
+
+const getPlayerSubstitutionStatus = (player, substitutions = []) => {
+  const subOut = substitutions.find(
+    (event) => event.playerOut?.id === player.id
+  );
+
+  if (subOut) {
+    return {
+      type: "out",
+      text: `Lecserélve ${subOut.minute}'`,
+    };
+  }
+
+  const subIn = substitutions.find(
+    (event) => event.playerIn?.id === player.id
+  );
+
+  if (subIn) {
+    return {
+      type: "in",
+      text: `Beállt ${subIn.minute}'`,
+    };
+  }
+
+  return null;
+};
+
+function PlayerStatsTooltip({ player }) {
+  return (
+    <div className="player-tooltip">
+      <strong>{player.name}</strong>
+
+      <p>
+        Saját poszt: {player.position || "-"} | Játszott poszt:{" "}
+        {getDisplayedPosition(player) || "-"}
+      </p>
+
+      <p>
+        OVR: {getRawOverall(player)} | Fit OVR: {getFitOverall(player)}
+      </p>
+
+      {player.stamina !== undefined && (
+        <div className="tooltip-stat-row">
+          <span>Stamina</span>
+          <strong>{player.stamina}</strong>
+        </div>
+      )}
+
+      {["pace", "shooting", "passing", "dribbling", "defending", "physical"].map(
+        (stat) => (
+          <div key={stat} className="tooltip-stat-row">
+            <span>{stat}</span>
+            <strong>{player[stat] ?? "-"}</strong>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+function PlayerInfoRow({ player, substitutions = [], showMatchPosition = false }) {
+  const fit = getFitData(player);
+  const substitutionStatus = getPlayerSubstitutionStatus(player, substitutions);
+  const displayedPosition = showMatchPosition
+    ? getDisplayedPosition(player)
+    : player.position;
+
+  return (
+    <div className="match-team-squad-row player-info-hover-row">
+      <strong>
+        {player.name}
+        {substitutionStatus && (
+          <small className={`substitution-badge substitution-${substitutionStatus.type}`}>
+            {substitutionStatus.text}
+          </small>
+        )}
+      </strong>
+
+      <span>{displayedPosition || "-"}</span>
+      <em className={fit.className}>{getFitOverall(player)}</em>
+
+      <PlayerStatsTooltip player={player} />
+    </div>
+  );
+}
+
+function TeamCurrentSquadPreview({ saveId, team, onTeamClick }) {
+  const [lineupSlots, setLineupSlots] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [formation, setFormation] = useState(team?.formation || "");
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!saveId || !team?.id) return;
+
+    setIsLoading(true);
+
+    Promise.all([
+      getTeamPlayers(saveId, team.id).catch(() => null),
+      getSquadScreen(saveId).catch(() => null),
+    ])
+      .then(([teamPlayersData, squadScreen]) => {
+        const isSelectedTeam = squadScreen?.team?.id === team.id;
+
+        if (isSelectedTeam) {
+          const previewSlots = squadScreen?.lineup?.preview || [];
+          const starterPlayers = mapLineupSlotsToPlayers(previewSlots);
+          const benchPlayers = squadScreen?.lineup?.bench || [];
+          const reservePlayers = squadScreen?.lineup?.reserve || [];
+
+          setLineupSlots(previewSlots);
+          setPlayers(uniquePlayers([...starterPlayers, ...benchPlayers, ...reservePlayers]));
+          setFormation(squadScreen?.team?.formation || squadScreen?.lineup?.formation || team?.formation || "");
+          return;
+        }
+
+        const normalizedPlayers = Array.isArray(teamPlayersData)
+          ? teamPlayersData
+          : teamPlayersData?.players ||
+            teamPlayersData?.team?.players ||
+            teamPlayersData?.data ||
+            [];
+
+        setLineupSlots([]);
+        setPlayers(normalizedPlayers);
+        setFormation(teamPlayersData?.team?.formation || team?.formation || "");
+      })
+      .catch(() => {
+        setLineupSlots([]);
+        setPlayers([]);
+      })
+      .finally(() => setIsLoading(false));
+  }, [saveId, team?.id, team?.formation]);
+
+  const startersFromSlots = mapLineupSlotsToPlayers(lineupSlots);
+
+  const starters =
+    startersFromSlots.length > 0
+      ? startersFromSlots
+      : players.filter(
+          (p) => p.role === "starter" || p.lineupSlot || p.lineupPosition
+        ).length > 0
+        ? players.filter(
+            (p) => p.role === "starter" || p.lineupSlot || p.lineupPosition
+          )
+        : [...players].sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0)).slice(0, 11);
+
+  const bench = players.filter((p) => p.role === "bench");
+
+  return (
+    <TeamSnapshotPreview
+      team={team}
+      formation={formation}
+      lineup={starters}
+      bench={bench}
+      onTeamClick={onTeamClick}
+      isLoading={isLoading}
+      loadingText="Keret betöltése..."
+      emptyText="Nincs keret adat."
+    />
+  );
+}
+
+function TeamSnapshotPreview({
+  team,
+  formation,
+  lineup,
+  bench,
+  substitutions = [],
+  onTeamClick,
+  isLoading = false,
+  loadingText = "Keret betöltése...",
+  emptyText = "Nincs keret adat.",
+}) {
+  const teamOverall = getTeamFitOverall(lineup || []);
+
+  return (
+    <section className="match-team-squad-preview">
+      <h3 className="clickable-team" onClick={() => onTeamClick?.(team?.id)}>
+        {team?.name} <span>({team?.shortName})</span>
+        <strong className="match-team-overall">OVR {teamOverall}</strong>
+      </h3>
+
+      <p className="muted-text">Formáció: {formation || "-"}</p>
+
+      {isLoading ? (
+        <InlineLoader text={loadingText} />
+      ) : lineup?.length ? (
+        <>
+          <h4>Kezdő</h4>
+          <div className="match-team-squad-list">
+            {lineup.slice(0, 11).map((player) => (
+              <PlayerInfoRow
+                key={player.id}
+                player={player}
+                substitutions={substitutions}
+                showMatchPosition
+              />
+            ))}
+          </div>
+
+          <h4>Cserepad</h4>
+          {bench?.length ? (
+            <div className="match-team-squad-list match-team-bench-list">
+              {bench.map((player) => (
+                <PlayerInfoRow
+                  key={player.id}
+                  player={player}
+                  substitutions={substitutions}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="muted-text">Nem volt cserepad adat.</p>
+          )}
+        </>
+      ) : (
+        <EmptyState title={emptyText} />
+      )}
+    </section>
+  );
+}
+
+function MatchEvents({ matchSummary }) {
+  const goalscorers = matchSummary?.goalscorers || [];
+  const substitutions = matchSummary?.substitutions || [];
+  const disciplinaryEvents = matchSummary?.disciplinaryEvents || [];
+  const injuryEvents = matchSummary?.injuryEvents || [];
+
+  const events = [
+    ...goalscorers.map((event) => ({
+      id: `goal-${event.minute}-${event.player?.id || event.player?.name || event.playerName}`,
+      minute: event.minute,
+      type: "GOAL",
+      teamSide: event.teamSide,
+      playerName: event.player?.name || event.playerName,
+    })),
+    ...substitutions.map((event) => ({
+      id: `sub-${event.minute}-${event.playerOut?.id || event.playerOut?.name}-${event.playerIn?.id || event.playerIn?.name}`,
+      minute: event.minute,
+      type: "SUBSTITUTION",
+      teamSide: event.teamSide,
+      playerOutName: event.playerOut?.name || event.playerOutName,
+      playerInName: event.playerIn?.name || event.playerInName,
+    })),
+    ...disciplinaryEvents.map((event) => ({
+      id: `card-${event.type}-${event.minute}-${event.player?.id || event.playerName}`,
+      minute: event.minute,
+      type: event.type,
+      teamSide: event.teamSide,
+      playerName: event.player?.name || event.playerName,
+    })),
+    ...injuryEvents.map((event) => ({
+      id: `injury-${event.minute}-${event.playerName}`,
+      minute: event.minute,
+      type: "INJURY",
+      teamSide: event.teamSide,
+      playerName: event.playerName,
+      injuryWeeks: event.injuryWeeks,
+    })),
+  ].sort((a, b) => a.minute - b.minute);
+
+  return (
+    <div className="match-summary-details">
+      <h3>Meccs események</h3>
+
+      {events.length ? (
+        <div className="match-event-list">
+          {events.map((event, index) => (
+            <div key={`${event.id}-${index}`} className="match-event-row">
+              <span>{event.minute}'</span>
+
+              {event.type === "GOAL" && (
+                <strong>
+                  ⚽ {event.playerName} ({event.teamSide})
+                </strong>
+              )}
+
+              {event.type === "SUBSTITUTION" && (
+                <strong>
+                  🔁 {event.playerOutName} → {event.playerInName} ({event.teamSide})
+                </strong>
+              )}
+              {event.type === "YELLOW_CARD" && (
+                <strong>
+                  🟨 {event.playerName} ({event.teamSide})
+                </strong>
+              )}
+
+              {event.type === "SECOND_YELLOW_RED" && (
+                <strong>
+                  🟨🟥 {event.playerName} - második sárga ({event.teamSide})
+                </strong>
+              )}
+
+              {event.type === "RED_CARD" && (
+                <strong>
+                  🟥 {event.playerName} ({event.teamSide})
+                </strong>
+              )}
+
+              {event.type === "INJURY" && (
+                <strong>
+                  🚑 {event.playerName}
+                  {event.injuryWeeks ? ` (${event.injuryWeeks} hét)` : ""} ({event.teamSide})
+                </strong>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="muted-text">Nem volt kiemelt meccsesemény.</p>
+      )}
+    </div>
+  );
+}
+
+function MatchFinances({ matchSummary }) {
+  const finances = matchSummary?.finances;
+
+  if (!finances) return null;
+
+  return (
+    <div className="match-finance-card">
+      <div>
+        <span className="game-page-kicker">Matchday Revenue</span>
+        <h3>Meccsnapi bevétel</h3>
+        <p className="muted-text">
+          A hazai csapat stadionja alapján számított jegybevétel.
+        </p>
+      </div>
+
+      <div className="match-finance-grid">
+        <div className="match-finance-item">
+          <span>Hazai csapat</span>
+          <strong>
+            {finances.homeTeam?.name || finances.homeTeam?.shortName || "-"}
+          </strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Stadion szint</span>
+          <strong>{finances.stadiumLevel ?? "-"}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Férőhely</span>
+          <strong>{formatNumber(finances.stadiumCapacity)}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Nézőszám</span>
+          <strong>
+            {formatNumber(finances.attendance)}
+            {finances.attendanceRate ? ` (${finances.attendanceRate}%)` : ""}
+          </strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Jegyár</span>
+          <strong>{formatMoney(finances.ticketPrice)}</strong>
+        </div>
+
+        <div className="match-finance-item highlight">
+          <span>Jegybevétel</span>
+          <strong>{formatMoney(finances.ticketRevenue)}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Balance előtte</span>
+          <strong>{formatMoney(finances.balanceBefore)}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Balance utána</span>
+          <strong>{formatMoney(finances.balanceAfter)}</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MatchTactics({ matchSummary }) {
+  const tactics = matchSummary?.tactics;
+
+  if (!tactics) return null;
+
+  const renderTeamTactic = (sideLabel, teamTactic) => {
+    if (!teamTactic) return null;
+
+    return (
+      <div className="match-tactic-team-card">
+        <div className="match-tactic-header">
+          <span>{sideLabel}</span>
+          <strong>{teamTactic.label || teamTactic.style || "-"}</strong>
+        </div>
+
+        <p className="muted-text">{teamTactic.description}</p>
+
+        <div className="match-tactic-strengths">
+          <span>OVR: {teamTactic.strengths?.overall ?? "-"}</span>
+          <span>DEF: {teamTactic.strengths?.defense ?? "-"}</span>
+          <span>MID: {teamTactic.strengths?.midfield ?? "-"}</span>
+          <span>ATT: {teamTactic.strengths?.attack ?? "-"}</span>
+        </div>
+
+        <div className="match-tactic-xg">
+          <span>
+            Saját xG hatás:{" "}
+            <strong>
+              {formatSignedDecimal(teamTactic.xgImpact?.ownXgModifier)}
+            </strong>
+          </span>
+
+          <span>
+            Ellenfél xG hatás:{" "}
+            <strong>
+              {formatSignedDecimal(teamTactic.xgImpact?.opponentXgModifier)}
+            </strong>
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="match-tactics-card">
+      <div>
+        <span className="game-page-kicker">Tactical Impact</span>
+        <h3>Taktikai hatás</h3>
+        <p className="muted-text">
+          A választott játékstílus módosítja a csapat támadó és védekező
+          teljesítményét, valamint a várható gólok számát.
+        </p>
+      </div>
+
+      <div className="match-tactics-grid">
+        {renderTeamTactic("Hazai taktika", tactics.home)}
+        {renderTeamTactic("Vendég taktika", tactics.away)}
+      </div>
+
+      {tactics.expectedGoals && (
+        <div className="match-tactic-expected-goals">
+          <span>Várható gólok</span>
+          <strong>
+            Hazai: {tactics.expectedGoals.home ?? "-"} | Vendég:{" "}
+            {tactics.expectedGoals.away ?? "-"}
+          </strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function MatchInfoModal({ fixture, saveId, onClose, onTeamClick }) {
+  if (!fixture) return null;
+
+  const matchSummary = fixture.matchSummary;
+  const hasSnapshot = fixture.isPlayed && matchSummary;
+
+  const homeSubstitutions =
+    matchSummary?.substitutions?.filter((event) => event.teamSide === "home") || [];
+
+  const awaySubstitutions =
+    matchSummary?.substitutions?.filter((event) => event.teamSide === "away") || [];
+
+  return (
+    <div className="modal-backdrop">
+      <div className="match-info-modal match-info-modal-wide">
+        <button className="modal-close-btn" onClick={onClose}>
+          ×
+        </button>
+
+        <span className="game-page-kicker">
+          {fixture.isPlayed ? "Match Summary" : "Match Preview"}
+        </span>
+
+        <h2>
+          {fixture.homeTeam?.shortName} - {fixture.awayTeam?.shortName}
+        </h2>
+
+        <MatchCard fixture={fixture} />
+
+        {hasSnapshot && <MatchFinances matchSummary={matchSummary} />}
+        {hasSnapshot && <MatchTactics matchSummary={matchSummary} />}
+        {hasSnapshot && <MatchEvents matchSummary={matchSummary} />}
+
+        <div className="match-squad-preview-grid">
+          {hasSnapshot ? (
+            <>
+              <TeamSnapshotPreview
+                team={fixture.homeTeam}
+                formation={matchSummary.homeFormation}
+                lineup={mapSummaryLineupToPlayers(matchSummary.homeLineup || [])}
+                bench={matchSummary.homeBench || []}
+                substitutions={homeSubstitutions}
+                onTeamClick={onTeamClick}
+              />
+
+              <TeamSnapshotPreview
+                team={fixture.awayTeam}
+                formation={matchSummary.awayFormation}
+                lineup={mapSummaryLineupToPlayers(matchSummary.awayLineup || [])}
+                bench={matchSummary.awayBench || []}
+                substitutions={awaySubstitutions}
+                onTeamClick={onTeamClick}
+              />
+            </>
+          ) : (
+            <>
+              <TeamCurrentSquadPreview
+                saveId={saveId}
+                team={fixture.homeTeam}
+                onTeamClick={onTeamClick}
+              />
+
+              <TeamCurrentSquadPreview
+                saveId={saveId}
+                team={fixture.awayTeam}
+                onTeamClick={onTeamClick}
+              />
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -28,4 +28,8 @@ export class SquadService {
   async getSelectedTeamClubSnapshot(saveId: string) {
     return this.usersService.getSelectedTeamClubSnapshot(saveId);
   }
+
+  async updateSelectedTeamFormation(saveId: string, formation: string) {
+    return this.usersService.updateSelectedTeamFormation(saveId, formation);
+  }
 }

@@ -201,13 +201,13 @@ export class SavesService {
           name: baseTeam.name,
           shortName: baseTeam.shortName,
           formation: '4-3-3',
+          budget: 100000000,
           gameSaveId: gameSave.id,
           saveLeagueId: baseTeam.leagueId
             ? createdSaveLeagues.get(baseTeam.leagueId)
             : null,
         },
       });
-
       createdSaveTeams.set(baseTeam.id, saveTeam.id);
     }
 
@@ -243,6 +243,8 @@ export class SavesService {
       }
 
       if (baseTeam.players.length > 0) {
+        const lineupSlotCounters: Record<string, number> = {};
+
         await this.prisma.savePlayer.createMany({
           data: baseTeam.players.map((player) => ({
             name: player.name,
@@ -257,8 +259,13 @@ export class SavesService {
             physical: player.physical,
             role: player.role,
             lineupPosition: player.lineupPosition,
-            lineupSlot: null,
+            lineupSlot: this.getInitialLineupSlot(player.lineupPosition, lineupSlotCounters),
             marketValue: player.marketValue,
+            salary: player.salary,
+            contractYears: player.contractYears,
+            fitness: 100,
+            injured: false,
+            injuryWeeks: 0,
             isTransferListed: false,
             gameSaveId: gameSave.id,
             saveTeamId,
@@ -334,7 +341,12 @@ export class SavesService {
 
     const saveIds = saves.map((save) => save.id);
 
-    const [selectedTeams, fixtureCounts, playedFixtureCounts] = await Promise.all([
+    const [
+      selectedTeams,
+      fixtureCounts,
+      playedFixtureCounts,
+      championCounts,
+    ] = await Promise.all([
       this.prisma.saveTeam.findMany({
         where: {
           gameSaveId: {
@@ -374,6 +386,17 @@ export class SavesService {
           _all: true,
         },
       }),
+      this.prisma.seasonChampion.groupBy({
+        by: ['gameSaveId'],
+        where: {
+          gameSaveId: {
+            in: saveIds,
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
     const selectedTeamById = new Map(selectedTeams.map((team) => [team.id, team]));
@@ -384,6 +407,9 @@ export class SavesService {
       playedFixtureCounts.map((item) => [item.gameSaveId, item._count._all]),
     );
 
+    const championCountBySaveId = new Map(
+      championCounts.map((item) => [item.gameSaveId, item._count._all]),
+    );
     return saves.map((save) => {
       const selectedTeam = save.selectedTeamId
         ? selectedTeamById.get(save.selectedTeamId) ?? null
@@ -392,6 +418,8 @@ export class SavesService {
       const totalFixtures = fixtureCountBySaveId.get(save.id) ?? 0;
       const playedFixtures = playedFixtureCountBySaveId.get(save.id) ?? 0;
       const isFinished = totalFixtures > 0 && playedFixtures === totalFixtures;
+      const completedSeasonCount = championCountBySaveId.get(save.id) ?? 0;
+      const currentSeasonNumber = completedSeasonCount + 1;
 
       return {
         id: save.id,
@@ -411,6 +439,10 @@ export class SavesService {
         progress: {
           playedFixtures,
           totalFixtures,
+        },
+        season: {
+          currentSeasonNumber,
+          completedSeasonCount,
         },
       };
     });
@@ -544,6 +576,40 @@ export class SavesService {
     }
 
     return lastFixture.roundNumber;
+  }
+
+  private getInitialLineupSlot(
+    lineupPosition: string | null,
+    counters: Record<string, number>,
+  ) {
+    if (!lineupPosition) return null;
+
+    counters[lineupPosition] = (counters[lineupPosition] ?? 0) + 1;
+    const index = counters[lineupPosition];
+
+    if (lineupPosition === 'GK') return index === 1 ? 'GK' : null;
+    if (lineupPosition === 'LB') return index === 1 ? 'LB' : null;
+    if (lineupPosition === 'RB') return index === 1 ? 'RB' : null;
+    if (lineupPosition === 'CDM') return index === 1 ? 'CDM' : null;
+    if (lineupPosition === 'CAM') return index === 1 ? 'CAM' : null;
+    if (lineupPosition === 'LW') return index === 1 ? 'LW' : null;
+    if (lineupPosition === 'RW') return index === 1 ? 'RW' : null;
+    if (lineupPosition === 'ST') return index === 1 ? 'ST' : null;
+
+    if (lineupPosition === 'CB') {
+      if (index === 1) return 'CB1';
+      if (index === 2) return 'CB2';
+      if (index === 3) return 'CB3';
+      return null;
+    }
+
+    if (lineupPosition === 'CM') {
+      if (index === 1) return 'CM1';
+      if (index === 2) return 'CM2';
+      return null;
+    }
+
+    return null;
   }
 
   private sanitizeUser(user: {

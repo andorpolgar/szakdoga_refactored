@@ -30,8 +30,6 @@ export class SquadService {
   }
 
   async updateSelectedTeamFormation(saveId: string, formation: string) {
-    console.log("FORMATION SQUAD SERVICE VALUE:", formation);
-
     return this.usersService.updateSelectedTeamFormation(saveId, formation);
   }
 }

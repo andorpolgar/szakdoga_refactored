@@ -261,6 +261,11 @@ export class SavesService {
             lineupPosition: player.lineupPosition,
             lineupSlot: this.getInitialLineupSlot(player.lineupPosition, lineupSlotCounters),
             marketValue: player.marketValue,
+            salary: player.salary,
+            contractYears: player.contractYears,
+            fitness: 100,
+            injured: false,
+            injuryWeeks: 0,
             isTransferListed: false,
             gameSaveId: gameSave.id,
             saveTeamId,
@@ -336,7 +341,12 @@ export class SavesService {
 
     const saveIds = saves.map((save) => save.id);
 
-    const [selectedTeams, fixtureCounts, playedFixtureCounts] = await Promise.all([
+    const [
+      selectedTeams,
+      fixtureCounts,
+      playedFixtureCounts,
+      championCounts,
+    ] = await Promise.all([
       this.prisma.saveTeam.findMany({
         where: {
           gameSaveId: {
@@ -376,6 +386,17 @@ export class SavesService {
           _all: true,
         },
       }),
+      this.prisma.seasonChampion.groupBy({
+        by: ['gameSaveId'],
+        where: {
+          gameSaveId: {
+            in: saveIds,
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
     const selectedTeamById = new Map(selectedTeams.map((team) => [team.id, team]));
@@ -386,6 +407,9 @@ export class SavesService {
       playedFixtureCounts.map((item) => [item.gameSaveId, item._count._all]),
     );
 
+    const championCountBySaveId = new Map(
+      championCounts.map((item) => [item.gameSaveId, item._count._all]),
+    );
     return saves.map((save) => {
       const selectedTeam = save.selectedTeamId
         ? selectedTeamById.get(save.selectedTeamId) ?? null
@@ -394,6 +418,8 @@ export class SavesService {
       const totalFixtures = fixtureCountBySaveId.get(save.id) ?? 0;
       const playedFixtures = playedFixtureCountBySaveId.get(save.id) ?? 0;
       const isFinished = totalFixtures > 0 && playedFixtures === totalFixtures;
+      const completedSeasonCount = championCountBySaveId.get(save.id) ?? 0;
+      const currentSeasonNumber = completedSeasonCount + 1;
 
       return {
         id: save.id,
@@ -413,6 +439,10 @@ export class SavesService {
         progress: {
           playedFixtures,
           totalFixtures,
+        },
+        season: {
+          currentSeasonNumber,
+          completedSeasonCount,
         },
       };
     });

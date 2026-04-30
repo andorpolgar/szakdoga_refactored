@@ -194,6 +194,7 @@ export default function SaveSelectorPage() {
                       </div>
 
                       <div className="career-save-meta">
+                        <span>{save.season?.currentSeasonNumber ?? 1}. szezon</span>
                         <span>Forduló: {save.currentRound}</span>
                         <span>
                           {save.progress?.playedFixtures ?? 0}/

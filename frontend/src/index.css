@@ -576,12 +576,7 @@ select {
   justify-content: space-between;
 }
 
-.squad-list-tooltip {
-  bottom: calc(100% + 10px);
-}
-
-.bench-player-card:hover .player-tooltip,
-.squad-list-player-card:hover .player-tooltip {
+.bench-player-card:hover .player-tooltip {
   opacity: 1;
   transform: translateX(-50%) translateY(-4px);
 }
@@ -1941,4 +1936,720 @@ select {
 .substitution-in {
   background: #dcfce7;
   color: #166534;
+}
+
+.stadium-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.stadium-main-card,
+.stadium-upgrade-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.stadium-icon {
+  display: inline-flex;
+  font-size: 44px;
+  margin-bottom: 8px;
+}
+
+.stadium-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.stadium-stat {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stadium-stat span {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.stadium-stat strong {
+  font-size: 22px;
+}
+
+.stadium-price {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+  .stadium-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stadium-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.listed-player-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.listed-player-values span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.player-injured {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.player-injured::after {
+  content: "SÉRÜLT";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 4px 7px;
+}
+
+.player-tired {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+}
+
+.player-tired::before {
+  content: "FÁRADT";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 4px 7px;
+}
+
+.match-finance-card {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  margin: 18px 0;
+}
+
+.match-finance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.match-finance-item {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.match-finance-item span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.match-finance-item strong {
+  color: #111827;
+  font-size: 16px;
+}
+
+.match-finance-item.highlight {
+  border-color: rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.16);
+}
+
+.match-finance-item.highlight strong {
+  font-size: 20px;
+}
+
+@media (max-width: 1000px) {
+  .match-finance-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .match-finance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.match-tactics-card {
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  margin: 18px 0;
+}
+
+.match-tactics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.match-tactic-team-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.match-tactic-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.match-tactic-header span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.match-tactic-header strong {
+  color: #111827;
+  font-size: 18px;
+}
+
+.match-tactic-strengths {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.match-tactic-strengths span {
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.match-tactic-xg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.match-tactic-expected-goals {
+  margin-top: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.match-tactic-expected-goals span {
+  color: #6b7280;
+}
+
+.match-tactic-expected-goals strong {
+  color: #111827;
+}
+
+@media (max-width: 900px) {
+  .match-tactics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .match-tactic-strengths {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .match-tactic-expected-goals {
+    flex-direction: column;
+  }
+}
+
+.season-final-panel {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.08);
+  margin-bottom: 20px;
+}
+
+.season-final-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.season-final-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #fde68a;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.season-final-card span {
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.season-final-card strong {
+  color: #111827;
+  font-size: 20px;
+}
+
+.season-final-card p {
+  margin: 0;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.champion-card {
+  border-color: rgba(245, 158, 11, 0.8);
+  background: rgba(245, 158, 11, 0.16);
+}
+
+.season-top-scorers {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #fde68a;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.season-top-scorers h3 {
+  margin-top: 0;
+}
+
+.season-top-scorer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.season-top-scorer-row {
+  display: grid;
+  grid-template-columns: 36px 1.5fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 10px;
+}
+
+.season-top-scorer-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.season-top-scorer-row span {
+  color: #92400e;
+  font-weight: 900;
+}
+
+.season-top-scorer-row strong {
+  color: #111827;
+}
+
+.season-top-scorer-row small {
+  color: #6b7280;
+}
+
+.season-top-scorer-row b {
+  color: #111827;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .season-final-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .season-final-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .season-top-scorer-row {
+    grid-template-columns: 32px 1fr;
+  }
+
+  .season-top-scorer-row small,
+  .season-top-scorer-row b {
+    grid-column: 2;
+  }
+}
+
+.dashboard-manager-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.manager-status-card,
+.manager-warning-card {
+  min-height: 100%;
+}
+
+.manager-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.manager-status-item {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.manager-status-item span {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.manager-status-item strong {
+  color: #111827;
+  font-size: 22px;
+}
+
+.manager-status-item.warning {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.manager-status-item.danger {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.manager-warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.manager-warning-item {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.manager-warning-item strong {
+  display: block;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.manager-warning-item p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.manager-warning-item.info {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.manager-warning-item.warning {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.manager-warning-item.danger {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.quick-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-manager-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .manager-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.player-contract-expired {
+  border-color: #991b1b !important;
+  background: rgba(153, 27, 27, 0.1) !important;
+}
+
+.player-contract-expired::after {
+  content: "LEJÁRT";
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: #991b1b;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 4px 7px;
+}
+
+.tooltip-action-btn {
+  width: 100%;
+  margin-top: 10px;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tooltip-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.champion-history-card {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.champion-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.champion-history-row {
+  display: grid;
+  grid-template-columns: 1.5fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #fde68a;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.champion-history-row strong {
+  color: #111827;
+}
+
+.champion-history-row span {
+  font-weight: 800;
+  color: #92400e;
+}
+
+.champion-history-row small {
+  color: #6b7280;
+}
+
+@media (max-width: 750px) {
+  .champion-history-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.player-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  width: 190px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #111827;
+  color: white;
+  text-align: left;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.squad-list-tooltip {
+  bottom: calc(100% + 10px);
+}
+
+.squad-list-tooltip.is-open {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.champion-history-row {
+  display: grid;
+  grid-template-columns: 52px 1.4fr auto 1fr;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid #fde68a;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.champion-history-rank {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.18);
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+
+.champion-history-team,
+.champion-history-titles,
+.champion-history-seasons {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.champion-history-team strong {
+  color: #111827;
+  font-size: 17px;
+}
+
+.champion-history-team small,
+.champion-history-seasons small {
+  color: #6b7280;
+}
+
+.champion-history-titles {
+  text-align: center;
+}
+
+.champion-history-titles strong {
+  color: #111827;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.champion-history-titles span,
+.champion-history-seasons span {
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 750px) {
+  .champion-history-row {
+    grid-template-columns: 1fr;
+  }
+
+  .champion-history-rank {
+    width: auto;
+  }
+
+  .champion-history-titles {
+    text-align: left;
+  }
+}
+
+.career-save-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.pitch-player-card:hover .player-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.bench-player-card:hover .player-tooltip,
+.squad-list-player-card:hover .player-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.contract-extension-card-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 8px;
+  align-self: flex-start;
+}
+
+.contract-extension-card-btn:hover {
+  background: #1f2937;
+}
+
+.contract-extension-card-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }

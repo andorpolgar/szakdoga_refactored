@@ -45,6 +45,32 @@ function PlayerTooltip({ player }) {
       </div>
 
       <div className="tooltip-stat-row">
+        <span>Fizetés</span>
+        <strong>{formatValue(player.salary)}</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Szerződés</span>
+        <strong>
+          {player.contractYears ? `${player.contractYears} év` : "-"}
+        </strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Fitness</span>
+        <strong>{player.fitness ?? 100}%</strong>
+      </div>
+
+      <div className="tooltip-stat-row">
+        <span>Állapot</span>
+        <strong>
+          {player.injured
+            ? `Sérült (${player.injuryWeeks ?? 1} forduló)`
+            : "Egészséges"}
+        </strong>
+      </div>
+
+      <div className="tooltip-stat-row">
         <span>Pace</span>
         <strong>{player.pace}</strong>
       </div>
@@ -99,6 +125,8 @@ function TransferPlayerCard({
 
       <div className="transfer-player-value">
         Érték: <strong>{formatValue(player.marketValue)}</strong>
+        <br />
+        Fizetés: <strong>{formatValue(player.salary)}</strong>
       </div>
 
       <button
@@ -373,7 +401,10 @@ export default function TransferPage() {
                       <strong>{player.name}</strong> ({player.position})
                     </span>
 
-                    <strong>{formatValue(player.marketValue)}</strong>
+                    <div className="listed-player-values">
+                      <strong>{formatValue(player.marketValue)}</strong>
+                      <span>Fizetés: {formatValue(player.salary)}</span>
+                    </div>
                   </div>
                 ))}
               </div>

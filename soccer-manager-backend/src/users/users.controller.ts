@@ -240,6 +240,14 @@ export class UsersController {
     );
   }
 
+  @Post('saves/:saveId/players/:playerId/extend-contract')
+  async extendSelectedTeamPlayerContract(
+    @Param('saveId') saveId: string,
+    @Param('playerId') playerId: string,
+  ) {
+    return this.usersService.extendSelectedTeamPlayerContract(saveId, playerId);
+  }
+
   @Patch('saves/:saveId/players/:playerId/transfer-list-status')
   async updatePlayerTransferListStatus(
     @Param('saveId') saveId: string,
@@ -279,6 +287,21 @@ export class UsersController {
   @Get('saves/:saveId/screens/standings')
   async getStandingsScreen(@Param('saveId') saveId: string) {
     return this.usersService.getStandingsScreen(saveId);
+  }
+
+  @Post('saves/:saveId/start-next-season')
+  async startNextSeason(@Param('saveId') saveId: string) {
+    return this.usersService.startNextSeason(saveId);
+  }
+
+  @Get('saves/:saveId/screens/stadium')
+  async getStadiumScreen(@Param('saveId') saveId: string) {
+    return this.usersService.getStadiumScreen(saveId);
+  }
+
+  @Post('saves/:saveId/selected-team/stadium/upgrade')
+  async upgradeSelectedTeamStadium(@Param('saveId') saveId: string) {
+    return this.usersService.upgradeSelectedTeamStadium(saveId);
   }
 
   @Post('auth/login')

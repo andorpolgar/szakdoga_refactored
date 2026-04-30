@@ -29,6 +29,8 @@ export default function SquadPage() {
   const changeFormation = useScreenStore((state) => state.changeFormation);
   const changeTacticStyle = useScreenStore((state) => state.changeTacticStyle);
 
+  const extendContract = useScreenStore((state) => state.extendContract);
+
   const isUpdating = useScreenStore((state) => state.isUpdatingSquadPlayer);
 
   const [lineupState, setLineupState] = useState({});
@@ -265,18 +267,6 @@ export default function SquadPage() {
     return <p>Nincs adat</p>;
   }
 
-  console.table(
-    lineupSlots.map((slot) => ({
-      slotId: slot.slotId,
-      tacticalPosition: slot.tacticalPosition,
-      playerName: slot.player?.name,
-      playerDefaultPosition: slot.player?.position,
-      playerLineupPosition: slot.player?.lineupPosition,
-      playerLineupSlot: slot.player?.lineupSlot,
-      effectiveOverall: slot.player?.effectiveOverall,
-    }))
-  );
-
   return (
     <div className="page-shell">
       <div className="page-container">
@@ -335,7 +325,11 @@ export default function SquadPage() {
           />
         </div>
 
-        <SquadPlayerList players={allPlayers} />
+        <SquadPlayerList
+          players={allPlayers}
+          isUpdating={isLineupRefreshing || isUpdating}
+          onExtendContract={(playerId) => extendContract(activeSaveId, playerId)}
+        />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import SquadPage from "../pages/SquadPage";
 import TransferPage from "../pages/TransferPage";
 import FixturesPage from "../pages/FixturesPage";
 import StandingsPage from "../pages/StandingsPage";
+import StadiumPage from "../pages/StadiumPage";
 
 import ProtectedRoute from "../components/ProtectedRoute";
 import SaveRequiredRoute from "../components/SaveRequiredRoute";
@@ -102,6 +103,15 @@ export default function AppRouter() {
             element={
               <ProtectedGamePage>
                 <StandingsPage />
+              </ProtectedGamePage>
+            }
+          />
+
+          <Route
+            path="/stadium"
+            element={
+              <ProtectedGamePage>
+                <StadiumPage />
               </ProtectedGamePage>
             }
           />

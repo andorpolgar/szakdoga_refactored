@@ -12,6 +12,12 @@ import { useGameStore } from "../store/gameStore";
 import TeamInfoModal from "../components/TeamInfoModal";
 import MatchInfoModal from "../components/MatchInfoModal";
 
+const formatMoney = (value) =>
+  `€${Number(value || 0).toLocaleString("hu-HU")}`;
+
+const formatNumber = (value) =>
+  Number(value || 0).toLocaleString("hu-HU");
+
 export default function DashboardPage() {
   const navigate = useNavigate();
 
@@ -115,6 +121,11 @@ export default function DashboardPage() {
       fixture.awayTeam?.id === dashboard.selectedTeam?.id
   );
 
+  const managerOverview = dashboard.managerOverview || null;
+  const squadStatus = managerOverview?.squadStatus || null;
+  const dashboardWarnings = squadStatus?.warnings || [];
+  const championCounts = dashboard.championHistory?.championCounts || [];
+
   return (
     <div className="page-shell">
       <div className="page-container">
@@ -190,7 +201,160 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          <StatCard
+            label="Balance"
+            value={formatMoney(managerOverview?.balance)}
+            helper="Klub aktuális pénzügyi kerete"
+          />
+
+          <StatCard
+            label="Taktika"
+            value={managerOverview?.tacticLabel || "-"}
+            helper={`Formáció: ${managerOverview?.formation || "-"}`}
+          />
+
+          <StatCard
+            label="Stadion"
+            value={
+              managerOverview
+                ? `Szint ${managerOverview.stadiumLevel}`
+                : "-"
+            }
+            helper={
+              managerOverview
+                ? `${formatNumber(managerOverview.stadiumCapacity)} férőhely`
+                : "Nincs stadion adat"
+            }
+          />
         </div>
+        
+        <div className="dashboard-manager-grid">
+          <section className="card manager-status-card">
+            <div className="section-heading-row">
+              <div>
+                <span className="game-page-kicker">Manager Overview</span>
+                <h2>Csapat állapota</h2>
+                <p className="muted-text">
+                  Gyors áttekintés a keret egészségi állapotáról és menedzseri teendőkről.
+                </p>
+              </div>
+            </div>
+
+            <div className="manager-status-grid">
+              <div className="manager-status-item">
+                <span>Átlag fitness</span>
+                <strong>{squadStatus?.averageFitness ?? "-"}%</strong>
+              </div>
+
+              <div className="manager-status-item">
+                <span>Kezdő fitness</span>
+                <strong>{squadStatus?.starterAverageFitness ?? "-"}%</strong>
+              </div>
+
+              <div className="manager-status-item warning">
+                <span>Fáradt játékosok</span>
+                <strong>{squadStatus?.tiredCount ?? 0}</strong>
+              </div>
+
+              <div className="manager-status-item danger">
+                <span>Sérültek</span>
+                <strong>{squadStatus?.injuredCount ?? 0}</strong>
+              </div>
+
+              <div className="manager-status-item">
+                <span>Keretméret</span>
+                <strong>{squadStatus?.squadSize ?? "-"}</strong>
+              </div>
+
+              <div className="manager-status-item">
+                <span>Fizetések összesen</span>
+                <strong>{formatMoney(squadStatus?.totalSalary)}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="card manager-warning-card">
+            <div className="section-heading-row">
+              <div>
+                <span className="game-page-kicker">Alerts</span>
+                <h2>Figyelmeztetések</h2>
+                <p className="muted-text">
+                  Ezekre érdemes ránézni a következő meccs előtt.
+                </p>
+              </div>
+            </div>
+
+            {dashboardWarnings.length ? (
+              <div className="manager-warning-list">
+                {dashboardWarnings.slice(0, 4).map((warning) => (
+                  <div
+                    key={warning.type}
+                    className={`manager-warning-item ${warning.level}`}
+                  >
+                    <strong>{warning.title}</strong>
+                    <p>{warning.message}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="Nincs sürgős teendő."
+                description="A keret állapota rendben van a következő mérkőzéshez."
+              />
+            )}
+
+            <div className="quick-action-row">
+              <button className="secondary-btn" onClick={() => navigate("/squad")}>
+                Keret kezelése
+              </button>
+
+              <button className="secondary-btn" onClick={() => navigate("/stadium")}>
+                Stadion
+              </button>
+
+              <button className="secondary-btn" onClick={() => navigate("/transfer")}>
+                Átigazolások
+              </button>
+            </div>
+          </section>
+        </div>
+
+        {championCounts.length > 0 && (
+          <section className="card champion-history-card">
+            <div className="section-heading-row">
+              <div>
+                <span className="game-page-kicker">History</span>
+                <h2>Bajnokok története</h2>
+                <p className="muted-text">
+                  Az eddig lejátszott szezonok bajnokai ebben a mentésben.
+                </p>
+              </div>
+            </div>
+
+            <div className="champion-history-list">
+              {championCounts.map((item, index) => (
+                <div key={item.team.id} className="champion-history-row">
+                  <span className="champion-history-rank">#{index + 1}</span>
+
+                  <div className="champion-history-team">
+                    <strong>{item.team.name}</strong>
+                    <small>{item.team.shortName}</small>
+                  </div>
+
+                  <div className="champion-history-titles">
+                    <strong>{item.titles}</strong>
+                    <span>bajnoki cím</span>
+                  </div>
+
+                  <div className="champion-history-seasons">
+                    <span>Szezonok</span>
+                    <small>{item.seasons.join(", ")}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="dashboard-final-grid">
           <section className="card dashboard-main-card">

@@ -12,9 +12,6 @@ export class SquadController {
     @Param('saveId') saveId: string,
     @Body() body: UpdateFormationDto,
   ) {
-    console.log("FORMATION CONTROLLER BODY:", body);
-    console.log("FORMATION CONTROLLER VALUE:", body.formation);
-
     return this.squadService.updateSelectedTeamFormation(saveId, body.formation);
   }
 

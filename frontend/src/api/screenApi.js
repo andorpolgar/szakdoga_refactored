@@ -144,3 +144,32 @@ export const updateSelectedTeamTacticStyle = async (saveId, tacticStyle) => {
 
   return data;
 };
+
+export const getStadiumScreen = async (saveId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/screens/stadium`);
+  return data;
+};
+
+export const upgradeSelectedTeamStadium = async (saveId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/selected-team/stadium/upgrade`
+  );
+
+  return data;
+};
+
+export const extendPlayerContract = async (saveId, playerId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/players/${playerId}/extend-contract`
+  );
+
+  return data;
+};
+
+export const startNextSeason = async (saveId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/start-next-season`
+  );
+
+  return data;
+};

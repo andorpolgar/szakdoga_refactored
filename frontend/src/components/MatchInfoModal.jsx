@@ -11,6 +11,22 @@ import {
   getTeamFitOverall,
 } from "../utils/positionFit";
 
+const formatMoney = (value) =>
+  `€${Number(value || 0).toLocaleString("hu-HU")}`;
+
+const formatNumber = (value) =>
+  Number(value || 0).toLocaleString("hu-HU");
+
+const formatSignedDecimal = (value) => {
+  const number = Number(value || 0);
+
+  if (number > 0) {
+    return `+${number.toFixed(2)}`;
+  }
+
+  return number.toFixed(2);
+};
+
 const uniquePlayers = (players) => {
   const map = new Map();
 
@@ -279,10 +295,12 @@ function TeamSnapshotPreview({
 function MatchEvents({ matchSummary }) {
   const goalscorers = matchSummary?.goalscorers || [];
   const substitutions = matchSummary?.substitutions || [];
+  const disciplinaryEvents = matchSummary?.disciplinaryEvents || [];
+  const injuryEvents = matchSummary?.injuryEvents || [];
 
   const events = [
     ...goalscorers.map((event) => ({
-      id: `goal-${event.minute}-${event.player?.id || event.player?.name}`,
+      id: `goal-${event.minute}-${event.player?.id || event.player?.name || event.playerName}`,
       minute: event.minute,
       type: "GOAL",
       teamSide: event.teamSide,
@@ -295,6 +313,21 @@ function MatchEvents({ matchSummary }) {
       teamSide: event.teamSide,
       playerOutName: event.playerOut?.name || event.playerOutName,
       playerInName: event.playerIn?.name || event.playerInName,
+    })),
+    ...disciplinaryEvents.map((event) => ({
+      id: `card-${event.type}-${event.minute}-${event.player?.id || event.playerName}`,
+      minute: event.minute,
+      type: event.type,
+      teamSide: event.teamSide,
+      playerName: event.player?.name || event.playerName,
+    })),
+    ...injuryEvents.map((event) => ({
+      id: `injury-${event.minute}-${event.playerName}`,
+      minute: event.minute,
+      type: "INJURY",
+      teamSide: event.teamSide,
+      playerName: event.playerName,
+      injuryWeeks: event.injuryWeeks,
     })),
   ].sort((a, b) => a.minute - b.minute);
 
@@ -319,11 +352,172 @@ function MatchEvents({ matchSummary }) {
                   🔁 {event.playerOutName} → {event.playerInName} ({event.teamSide})
                 </strong>
               )}
+              {event.type === "YELLOW_CARD" && (
+                <strong>
+                  🟨 {event.playerName} ({event.teamSide})
+                </strong>
+              )}
+
+              {event.type === "SECOND_YELLOW_RED" && (
+                <strong>
+                  🟨🟥 {event.playerName} - második sárga ({event.teamSide})
+                </strong>
+              )}
+
+              {event.type === "RED_CARD" && (
+                <strong>
+                  🟥 {event.playerName} ({event.teamSide})
+                </strong>
+              )}
+
+              {event.type === "INJURY" && (
+                <strong>
+                  🚑 {event.playerName}
+                  {event.injuryWeeks ? ` (${event.injuryWeeks} hét)` : ""} ({event.teamSide})
+                </strong>
+              )}
             </div>
           ))}
         </div>
       ) : (
         <p className="muted-text">Nem volt kiemelt meccsesemény.</p>
+      )}
+    </div>
+  );
+}
+
+function MatchFinances({ matchSummary }) {
+  const finances = matchSummary?.finances;
+
+  if (!finances) return null;
+
+  return (
+    <div className="match-finance-card">
+      <div>
+        <span className="game-page-kicker">Matchday Revenue</span>
+        <h3>Meccsnapi bevétel</h3>
+        <p className="muted-text">
+          A hazai csapat stadionja alapján számított jegybevétel.
+        </p>
+      </div>
+
+      <div className="match-finance-grid">
+        <div className="match-finance-item">
+          <span>Hazai csapat</span>
+          <strong>
+            {finances.homeTeam?.name || finances.homeTeam?.shortName || "-"}
+          </strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Stadion szint</span>
+          <strong>{finances.stadiumLevel ?? "-"}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Férőhely</span>
+          <strong>{formatNumber(finances.stadiumCapacity)}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Nézőszám</span>
+          <strong>
+            {formatNumber(finances.attendance)}
+            {finances.attendanceRate ? ` (${finances.attendanceRate}%)` : ""}
+          </strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Jegyár</span>
+          <strong>{formatMoney(finances.ticketPrice)}</strong>
+        </div>
+
+        <div className="match-finance-item highlight">
+          <span>Jegybevétel</span>
+          <strong>{formatMoney(finances.ticketRevenue)}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Balance előtte</span>
+          <strong>{formatMoney(finances.balanceBefore)}</strong>
+        </div>
+
+        <div className="match-finance-item">
+          <span>Balance utána</span>
+          <strong>{formatMoney(finances.balanceAfter)}</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MatchTactics({ matchSummary }) {
+  const tactics = matchSummary?.tactics;
+
+  if (!tactics) return null;
+
+  const renderTeamTactic = (sideLabel, teamTactic) => {
+    if (!teamTactic) return null;
+
+    return (
+      <div className="match-tactic-team-card">
+        <div className="match-tactic-header">
+          <span>{sideLabel}</span>
+          <strong>{teamTactic.label || teamTactic.style || "-"}</strong>
+        </div>
+
+        <p className="muted-text">{teamTactic.description}</p>
+
+        <div className="match-tactic-strengths">
+          <span>OVR: {teamTactic.strengths?.overall ?? "-"}</span>
+          <span>DEF: {teamTactic.strengths?.defense ?? "-"}</span>
+          <span>MID: {teamTactic.strengths?.midfield ?? "-"}</span>
+          <span>ATT: {teamTactic.strengths?.attack ?? "-"}</span>
+        </div>
+
+        <div className="match-tactic-xg">
+          <span>
+            Saját xG hatás:{" "}
+            <strong>
+              {formatSignedDecimal(teamTactic.xgImpact?.ownXgModifier)}
+            </strong>
+          </span>
+
+          <span>
+            Ellenfél xG hatás:{" "}
+            <strong>
+              {formatSignedDecimal(teamTactic.xgImpact?.opponentXgModifier)}
+            </strong>
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="match-tactics-card">
+      <div>
+        <span className="game-page-kicker">Tactical Impact</span>
+        <h3>Taktikai hatás</h3>
+        <p className="muted-text">
+          A választott játékstílus módosítja a csapat támadó és védekező
+          teljesítményét, valamint a várható gólok számát.
+        </p>
+      </div>
+
+      <div className="match-tactics-grid">
+        {renderTeamTactic("Hazai taktika", tactics.home)}
+        {renderTeamTactic("Vendég taktika", tactics.away)}
+      </div>
+
+      {tactics.expectedGoals && (
+        <div className="match-tactic-expected-goals">
+          <span>Várható gólok</span>
+          <strong>
+            Hazai: {tactics.expectedGoals.home ?? "-"} | Vendég:{" "}
+            {tactics.expectedGoals.away ?? "-"}
+          </strong>
+        </div>
       )}
     </div>
   );
@@ -358,6 +552,8 @@ export default function MatchInfoModal({ fixture, saveId, onClose, onTeamClick }
 
         <MatchCard fixture={fixture} />
 
+        {hasSnapshot && <MatchFinances matchSummary={matchSummary} />}
+        {hasSnapshot && <MatchTactics matchSummary={matchSummary} />}
         {hasSnapshot && <MatchEvents matchSummary={matchSummary} />}
 
         <div className="match-squad-preview-grid">

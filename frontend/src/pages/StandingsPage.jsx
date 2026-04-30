@@ -15,10 +15,14 @@ export default function StandingsPage() {
   const isLoading = useScreenStore((state) => state.isLoadingStandingsScreen);
   const error = useScreenStore((state) => state.standingsScreenError);
   const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const [seasonStartMessage, setSeasonStartMessage] = useState(null);
 
   const loadStandingsScreen = useScreenStore(
     (state) => state.loadStandingsScreen
   );
+
+  const startSeason = useScreenStore((state) => state.startSeason);
+  const isCompletingRound = useScreenStore((state) => state.isCompletingRound);
 
   const openTeamModal = (teamId) => {
     if (!teamId) return;
@@ -28,6 +32,17 @@ export default function StandingsPage() {
   useEffect(() => {
     loadStandingsScreen(activeSaveId).catch(() => {});
   }, [activeSaveId, loadStandingsScreen]);
+
+  const handleStartNextSeason = async () => {
+    setSeasonStartMessage(null);
+
+    const result = await startSeason(activeSaveId).catch(() => null);
+
+    if (result) {
+      setSeasonStartMessage("Az új szezon sikeresen elindult.");
+      await loadStandingsScreen(activeSaveId).catch(() => {});
+    }
+  };
 
   if (isLoading && !standingsScreen) {
     return (
@@ -69,6 +84,21 @@ export default function StandingsPage() {
 
   const leader = table[0];
 
+  const topScorers =
+    standingsScreen.topScorers ||
+    standingsScreen.seasonSummary?.topScorers ||
+    [];
+
+  const highlights =
+    standingsScreen.highlights ||
+    standingsScreen.seasonSummary?.highlights ||
+    {};
+
+  const selectedTeamOutcome =
+    standingsScreen.selectedTeamOutcome ||
+    standingsScreen.seasonSummary?.selectedTeamOutcome ||
+    null;
+
   const selectedTeamShortName =
     standingsScreen.team?.shortName ||
     standingsScreen.selectedTeam?.shortName ||
@@ -99,6 +129,9 @@ export default function StandingsPage() {
         </PageHero>
 
         {error && <p className="error-text">{error}</p>}
+        {seasonStartMessage && (
+          <p className="success-text">{seasonStartMessage}</p>
+        )}
 
         <div className="stat-grid">
           <div
@@ -130,6 +163,95 @@ export default function StandingsPage() {
             helper={isSeasonFinished ? "A bajnokság lezárult" : "Szezon állása"}
           />
         </div>
+
+        {isSeasonFinished && (
+          <section className="card season-final-panel">
+            <div className="section-heading-row">
+              <div>
+                <span className="game-page-kicker">Season Summary</span>
+                <h2>Szezon végi összegzés</h2>
+                <p className="muted-text">
+                  A bajnokság lezárult, itt láthatók a szezon legfontosabb eredményei.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isCompletingRound}
+                onClick={handleStartNextSeason}
+              >
+                {isCompletingRound ? "Új szezon indítása..." : "Új szezon indítása"}
+              </button>
+            </div>
+
+            <div className="season-final-grid">
+              <div className="season-final-card champion-card">
+                <span>Bajnok</span>
+                <strong>
+                  {standingsScreen.champion?.team?.name ||
+                    leader?.team?.name ||
+                    "-"}
+                </strong>
+                <p>
+                  {standingsScreen.champion?.points ??
+                    leader?.points ??
+                    0}{" "}
+                  pont
+                </p>
+              </div>
+
+              <div className="season-final-card">
+                <span>Saját szezon</span>
+                <strong>
+                  {selectedTeamOutcome?.message ||
+                    (ownTeam ? `${ownTeam.position}. hely` : "-")}
+                </strong>
+                <p>{ownTeam ? `${ownTeam.points} pont` : "Nincs adat"}</p>
+              </div>
+
+              <div className="season-final-card">
+                <span>Legtöbb rúgott gól</span>
+                <strong>
+                  {highlights.topScoringTeam?.team?.name || "-"}
+                </strong>
+                <p>{highlights.topScoringTeam?.goalsFor ?? 0} gól</p>
+              </div>
+
+              <div className="season-final-card">
+                <span>Legjobb védelem</span>
+                <strong>
+                  {highlights.bestDefenseTeam?.team?.name || "-"}
+                </strong>
+                <p>
+                  {highlights.bestDefenseTeam?.goalsAgainst ?? 0} kapott gól
+                </p>
+              </div>
+            </div>
+
+            <div className="season-top-scorers">
+              <h3>Góllövőlista</h3>
+
+              {topScorers.length ? (
+                <div className="season-top-scorer-list">
+                  {topScorers.map((player, index) => (
+                    <div key={player.id} className="season-top-scorer-row">
+                      <span>{index + 1}.</span>
+
+                      <strong>{player.name}</strong>
+
+                      <small>
+                        {player.saveTeam?.shortName || "-"} · {player.position}
+                      </small>
+
+                      <b>{player.goalsScored} gól</b>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted-text">Még nincs gólszerző adat.</p>
+              )}
+            </div>
+          </section>
+        )}
 
         <section className="card">
           <div className="section-heading-row">

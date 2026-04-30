@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: "Átigazolások", path: "/transfer", icon: "💸" },
   { label: "Meccsek", path: "/fixtures", icon: "⚽" },
   { label: "Tabella", path: "/standings", icon: "📊" },
+  { label: "Stadion", path: "/stadium", icon: "🏟️" },
 ];
 
 export default function GameNav() {

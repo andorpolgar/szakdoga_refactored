@@ -16,6 +16,8 @@ import {
   updatePlayerLineupPosition,
   updatePlayerRole,
   updatePlayerTransferListStatus,
+  extendPlayerContract,
+  startNextSeason,
 } from "../api/screenApi";
 
 const getErrorMessage = (error, fallback) =>
@@ -313,6 +315,38 @@ export const useScreenStore = create((set, get) => ({
     }
   },
 
+  extendContract: async (saveId, playerId) => {
+    set({
+      isUpdatingSquadPlayer: true,
+      squadScreenError: null,
+    });
+
+    try {
+      const result = await extendPlayerContract(saveId, playerId);
+
+      await Promise.all([
+        get().loadSquadScreen(saveId),
+        get().loadTransferScreen(saveId),
+      ]);
+
+      set({
+        isUpdatingSquadPlayer: false,
+      });
+
+      return result;
+    } catch (error) {
+      set({
+        isUpdatingSquadPlayer: false,
+        squadScreenError: getErrorMessage(
+          error,
+          "Nem sikerült meghosszabbítani a szerződést."
+        ),
+      });
+
+      throw error;
+    }
+  },
+
   setPlayerTransferStatus: async (saveId, playerId, isTransferListed) => {
     set({
       isUpdatingTransferStatus: true,
@@ -523,6 +557,40 @@ export const useScreenStore = create((set, get) => ({
         squadScreenError: getErrorMessage(
           error,
           "Nem sikerült módosítani a taktikát."
+        ),
+      });
+
+      throw error;
+    }
+  },
+
+  startSeason: async (saveId) => {
+    set({
+      isCompletingRound: true,
+      fixturesScreenError: null,
+      standingsScreenError: null,
+    });
+
+    try {
+      const result = await startNextSeason(saveId);
+
+      await Promise.all([
+        get().loadFixturesScreen(saveId),
+        get().loadStandingsScreen(saveId),
+        get().loadSquadScreen(saveId),
+      ]);
+
+      set({
+        isCompletingRound: false,
+      });
+
+      return result;
+    } catch (error) {
+      set({
+        isCompletingRound: false,
+        fixturesScreenError: getErrorMessage(
+          error,
+          "Nem sikerült elindítani az új szezont."
         ),
       });
 

@@ -3,7 +3,6 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateGameSaveDto } from './dto/create-game-save.dto';
 import { RenameSaveDto } from './dto/rename-save.dto';
-import { SaveMatchResultDto } from './dto/save-match-result.dto';
 import { PlaySelectedTeamMatchDto } from './dto/play-selected-team-match.dto';
 import { UpdatePlayerRoleDto } from './dto/update-player-role.dto';
 import { UpdatePlayerLineupPositionDto } from './dto/update-player-lineup-position.dto';
@@ -131,6 +130,18 @@ export class UsersController {
       body.awayGoals,
     );
   }
+  
+  @Post('saves/:saveId/simulate-current-round')
+  async simulateRemainingFixturesInCurrentRound(
+    @Param('saveId') saveId: string,
+  ) {
+    return this.usersService.simulateRemainingFixturesInCurrentRound(saveId);
+  }
+  
+  @Post('saves/:saveId/complete-current-round')
+  async completeCurrentRound(@Param('saveId') saveId: string) {
+    return this.usersService.completeCurrentRound(saveId);
+  }
 
   @Get('saves/:saveId/rounds')
   async getRoundsOverview(@Param('saveId') saveId: string) {
@@ -217,6 +228,25 @@ export class UsersController {
     );
   }
   
+  @Patch('saves/:saveId/selected-team/tactic-style')
+  async updateSelectedTeamTacticStyle(
+    @Param('saveId') saveId: string,
+    @Body() body: { tacticStyle: string },
+  ) {
+    return this.usersService.updateSelectedTeamTacticStyle(
+      saveId,
+      body.tacticStyle,
+    );
+  }
+
+  @Post('saves/:saveId/players/:playerId/extend-contract')
+  async extendSelectedTeamPlayerContract(
+    @Param('saveId') saveId: string,
+    @Param('playerId') playerId: string,
+  ) {
+    return this.usersService.extendSelectedTeamPlayerContract(saveId, playerId);
+  }
+
   @Patch('saves/:saveId/players/:playerId/transfer-list-status')
   async updatePlayerTransferListStatus(
     @Param('saveId') saveId: string,
@@ -256,6 +286,21 @@ export class UsersController {
   @Get('saves/:saveId/screens/standings')
   async getStandingsScreen(@Param('saveId') saveId: string) {
     return this.usersService.getStandingsScreen(saveId);
+  }
+
+  @Post('saves/:saveId/start-next-season')
+  async startNextSeason(@Param('saveId') saveId: string) {
+    return this.usersService.startNextSeason(saveId);
+  }
+
+  @Get('saves/:saveId/screens/stadium')
+  async getStadiumScreen(@Param('saveId') saveId: string) {
+    return this.usersService.getStadiumScreen(saveId);
+  }
+
+  @Post('saves/:saveId/selected-team/stadium/upgrade')
+  async upgradeSelectedTeamStadium(@Param('saveId') saveId: string) {
+    return this.usersService.upgradeSelectedTeamStadium(saveId);
   }
 
   @Post('auth/login')

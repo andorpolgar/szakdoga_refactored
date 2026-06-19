@@ -1,0 +1,175 @@
+import http from "./http";
+
+export const getSquadScreen = async (saveId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/screens/squad`);
+  return data;
+};
+
+export const getTransferScreen = async (saveId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/screens/transfer`);
+  return data;
+};
+
+export const getFixturesScreen = async (saveId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/screens/fixtures`);
+  return data;
+};
+
+export const getStandingsScreen = async (saveId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/screens/standings`);
+  return data;
+};
+
+export const getSelectedTeamLineup = async (saveId) => {
+  const { data } = await http.get(
+    `/squad/saves/${saveId}/selected-team/lineup`
+  );
+  return data;
+};
+
+export const saveSelectedTeamLineup = async (saveId, payload) => {
+  const { data } = await http.put(
+    `/squad/saves/${saveId}/selected-team/lineup`,
+    payload
+  );
+  return data;
+};
+
+export const autoPickSelectedTeamLineup = async (saveId) => {
+  const { data } = await http.post(
+    `/squad/saves/${saveId}/selected-team/lineup/auto-pick`
+  );
+  return data;
+};
+
+export const playMyNextMatch = async (saveId, payload) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/selected-team/play-next-match`,
+    payload
+  );
+  return data;
+};
+
+export const simulateCurrentRound = async (saveId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/simulate-current-round`
+  );
+  return data;
+};
+
+export const completeCurrentRound = async (saveId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/complete-current-round`
+  );
+  return data;
+};
+
+export const buyTransferPlayer = async (saveId, playerId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/transfer-listed-players/${playerId}/buy`
+  );
+  return data;
+};
+
+export const updatePlayerTransferListStatus = async (
+  saveId,
+  playerId,
+  isTransferListed
+) => {
+  const { data } = await http.patch(
+    `/users/saves/${saveId}/players/${playerId}/transfer-list-status`,
+    { isTransferListed }
+  );
+  return data;
+};
+
+export const updatePlayerRole = async (saveId, playerId, role) => {
+  const { data } = await http.patch(
+    `/users/saves/${saveId}/players/${playerId}/role`,
+    { role }
+  );
+  return data;
+};
+
+export const updatePlayerLineupPosition = async (
+  saveId,
+  playerId,
+  lineupPosition
+) => {
+  const { data } = await http.patch(
+    `/users/saves/${saveId}/players/${playerId}/lineup-position`,
+    { lineupPosition }
+  );
+  return data;
+};
+
+export const updateSelectedTeamFormation = async (saveId, formation) => {
+  const { data } = await http.patch(
+    `/squad/saves/${saveId}/selected-team/formation`,
+    { formation }
+  );
+
+  return data;
+};
+
+export const playCurrentRound = async (saveId) => {
+  const { data } = await http.post(`/match/saves/${saveId}/play-round`);
+  return data;
+};
+
+export const getTeamDetail = async (saveId, teamId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/teams/${teamId}`);
+  return data;
+};
+
+export const getTeamPlayers = async (saveId, teamId) => {
+  const { data } = await http.get(
+    `/users/saves/${saveId}/teams/${teamId}/players`
+  );
+  return data;
+};
+
+export const getTeamFixtures = async (saveId, teamId) => {
+  const { data } = await http.get(
+    `/users/saves/${saveId}/teams/${teamId}/fixtures`
+  );
+  return data;
+};
+
+export const updateSelectedTeamTacticStyle = async (saveId, tacticStyle) => {
+  const { data } = await http.patch(
+    `/users/saves/${saveId}/selected-team/tactic-style`,
+    { tacticStyle }
+  );
+
+  return data;
+};
+
+export const getStadiumScreen = async (saveId) => {
+  const { data } = await http.get(`/users/saves/${saveId}/screens/stadium`);
+  return data;
+};
+
+export const upgradeSelectedTeamStadium = async (saveId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/selected-team/stadium/upgrade`
+  );
+
+  return data;
+};
+
+export const extendPlayerContract = async (saveId, playerId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/players/${playerId}/extend-contract`
+  );
+
+  return data;
+};
+
+export const startNextSeason = async (saveId) => {
+  const { data } = await http.post(
+    `/users/saves/${saveId}/start-next-season`
+  );
+
+  return data;
+};

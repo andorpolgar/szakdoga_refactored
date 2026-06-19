@@ -38,6 +38,7 @@ model GameSave {
   standings SaveStanding[]
 
   transferHistory TransferHistory[]
+  seasonChampions SeasonChampion[]
 
   @@index([userId])
 }
@@ -57,11 +58,16 @@ model BaseTeam {
 }
 
 model SaveTeam {
-  id        String   @id @default(cuid())
-  name      String
-  shortName String
-  formation String   @default("4-3-3")
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  name            String
+  shortName       String
+  tacticStyle     String   @default("balanced")
+  budget          Int      @default(100000000)
+  formation       String   @default("4-3-3")
+  balance         Int      @default(50000000)
+  stadiumLevel    Int      @default(1)
+  stadiumCapacity Int      @default(25000)
+  createdAt       DateTime @default(now())
 
   gameSaveId String
   gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
@@ -100,6 +106,8 @@ model BasePlayer {
   role           String
   lineupPosition String?
   marketValue    Int     @default(0)
+  salary         Int     @default(1000000)
+  contractYears  Int     @default(3)
 
   teamId String
   team   BaseTeam @relation(fields: [teamId], references: [id])
@@ -128,6 +136,13 @@ model SavePlayer {
   lineupSlot       String?
   isTransferListed Boolean @default(false)
   marketValue      Int     @default(0)
+  salary           Int     @default(1000000)
+  contractYears    Int     @default(3)
+  goalsScored      Int     @default(0)
+  fitness             Int     @default(100)
+  injured             Boolean @default(false)
+  injuryWeeks         Int     @default(0)
+  suspendedUntilRound Int?
 
   createdAt DateTime @default(now())
 
@@ -213,13 +228,44 @@ model MatchResult {
   awayGoals Int
   playedAt  DateTime @default(now())
 
+  homeFormation String?
+  awayFormation String?
+
+  homeLineup Json?
+  awayLineup Json?
+  homeBench  Json?
+  awayBench  Json?
+
+  matchSummary Json?
+
   gameSaveId String
   gameSave   GameSave @relation(fields: [gameSaveId], references: [id])
 
   saveFixtureId String      @unique
   saveFixture   SaveFixture @relation(fields: [saveFixtureId], references: [id])
 
+  events MatchEvent[]
+
   @@index([gameSaveId])
+}
+
+model MatchEvent {
+  id            String   @id @default(cuid())
+  minute        Int
+  type          String
+  teamSide      String
+
+  playerName    String?
+  assistName    String?
+  playerInName  String?
+  playerOutName String?
+
+  matchResultId String
+  matchResult   MatchResult @relation(fields: [matchResultId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([matchResultId])
 }
 
 model SaveStanding {
@@ -264,4 +310,29 @@ model TransferHistory {
   @@index([playerId])
   @@index([fromSaveTeamId])
   @@index([toSaveTeamId])
+}
+
+model SeasonChampion {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  seasonNumber Int
+
+  championTeamId        String
+  championTeamName      String
+  championTeamShortName String
+
+  points       Int
+  wins         Int
+  draws        Int
+  losses       Int
+  goalsFor     Int
+  goalsAgainst Int
+
+  gameSaveId String
+  gameSave   GameSave @relation(fields: [gameSaveId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSaveId, seasonNumber])
+  @@index([gameSaveId])
+  @@index([championTeamId])
 }

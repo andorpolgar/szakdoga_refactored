@@ -1,0 +1,2 @@
+ALTER TABLE "SavePlayer"
+ADD COLUMN IF NOT EXISTS "suspendedUntilRound" INTEGER;
